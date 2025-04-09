@@ -42,6 +42,7 @@ class OnlineChessViewModel : ViewModel() {
 
     private var timerJob: Job? = null
     private var matchListener: ListenerRegistration? = null
+    private var matchmakingListener: ListenerRegistration? = null
     private var matchmakingJob: Job? = null
     private val isMatchmaking = AtomicBoolean(false)
 
@@ -60,7 +61,8 @@ class OnlineChessViewModel : ViewModel() {
         val queueData = hashMapOf(
             "userId" to userId,
             "timestamp" to FieldValue.serverTimestamp(),
-            "status" to "waiting"
+            "status" to "waiting",
+            "matchId" to null
         )
 
         viewModelScope.launch {
@@ -69,7 +71,7 @@ class OnlineChessViewModel : ViewModel() {
                     .document(userId)
                     .set(queueData)
                     .await()
-                tryMatchmaking(userId)
+                listenForMatchmaking(userId)
             } catch (e: Exception) {
                 matchmakingError.value = "Không thể tham gia hàng đợi: ${e.message}"
                 isMatchmaking.set(false)
@@ -77,24 +79,53 @@ class OnlineChessViewModel : ViewModel() {
         }
     }
 
+    private fun listenForMatchmaking(userId: String) {
+        matchmakingListener?.remove()
+        matchmakingListener = db.collection("matchmaking_queue")
+            .document(userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) {
+                    matchmakingError.value = "Lỗi nghe hàng đợi: ${error?.message}"
+                    return@addSnapshotListener
+                }
+
+                val status = snapshot.getString("status")
+                val matchIdFromQueue = snapshot.getString("matchId")
+
+                if (status == "matched" && matchIdFromQueue != null) {
+                    matchId.value = matchIdFromQueue
+                    playerColor.value = if (auth.currentUser?.uid == snapshot.getString("player1")) PieceColor.WHITE else PieceColor.BLACK
+                    listenToMatchUpdates()
+                    startTimer()
+                    db.collection("matchmaking_queue").document(userId).delete()
+                    isMatchmaking.set(false)
+                    matchmakingListener?.remove()
+                } else if (status == "waiting") {
+                    // Gọi tryMatchmaking trong coroutine
+                    viewModelScope.launch {
+                        tryMatchmaking(userId)
+                    }
+                }
+            }
+    }
+
     private suspend fun tryMatchmaking(userId: String) {
         matchmakingJob?.cancel()
         matchmakingJob = viewModelScope.launch {
-            val timeoutSeconds = 60L // Tăng thời gian chờ lên 60 giây
+            val timeoutSeconds = 60L
             val startTime = System.currentTimeMillis()
 
-            while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000) {
+            while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000 && isMatchmaking.get()) {
                 val matched = tryMatchWithOpponent(userId)
-                if (matched) {
-                    isMatchmaking.set(false)
-                    return@launch
-                }
-                delay(2000L) // Giãn cách kiểm tra lên 2 giây để giảm tải
+                if (matched) return@launch
+                delay(2000L)
             }
 
-            db.collection("matchmaking_queue").document(userId).delete()
-            matchmakingError.value = "Không tìm thấy đối thủ trong $timeoutSeconds giây. Vui lòng thử lại."
-            isMatchmaking.set(false)
+            if (isMatchmaking.get()) {
+                db.collection("matchmaking_queue").document(userId).delete()
+                matchmakingError.value = "Không tìm thấy đối thủ trong $timeoutSeconds giây."
+                isMatchmaking.set(false)
+            }
         }
     }
 
@@ -109,12 +140,25 @@ class OnlineChessViewModel : ViewModel() {
                 .filter { it.getString("userId") != userId }
                 .sortedBy { it.getTimestamp("timestamp")?.toDate()?.time }
 
-            if (waitingPlayers.isEmpty()) {
-                return false
-            }
+            if (waitingPlayers.isEmpty()) return false
 
             val opponentDoc = waitingPlayers.first()
             val opponentId = opponentDoc.getString("userId") ?: return false
+
+            val matchId = db.collection("matches").document().id
+            val matchData = hashMapOf(
+                "matchId" to matchId,
+                "player1" to userId,
+                "player2" to opponentId,
+                "board" to boardToMap(game.getBoard()),
+                "currentTurn" to currentTurn.value.toString(),
+                "whiteTime" to 600,
+                "blackTime" to 600,
+                "status" to "ongoing",
+                "winner" to null,
+                "drawRequest" to null,
+                "lastMove" to null
+            )
 
             val success = db.runTransaction { transaction ->
                 val userRef = db.collection("matchmaking_queue").document(userId)
@@ -123,13 +167,13 @@ class OnlineChessViewModel : ViewModel() {
                 val userDoc = transaction.get(userRef)
                 val opponentDoc = transaction.get(opponentRef)
 
-                // Kiểm tra trạng thái của cả hai người chơi
                 if (userDoc.exists() && opponentDoc.exists() &&
                     userDoc.getString("status") == "waiting" &&
                     opponentDoc.getString("status") == "waiting"
                 ) {
-                    transaction.update(userRef, "status", "matched")
-                    transaction.update(opponentRef, "status", "matched")
+                    transaction.set(db.collection("matches").document(matchId), matchData)
+                    transaction.update(userRef, mapOf("status" to "matched", "matchId" to matchId))
+                    transaction.update(opponentRef, mapOf("status" to "matched", "matchId" to matchId))
                     true
                 } else {
                     false
@@ -137,62 +181,29 @@ class OnlineChessViewModel : ViewModel() {
             }.await()
 
             if (success) {
-                createMatch(userId, opponentId)
-                true
-            } else {
-                false
+                this.matchId.value = matchId
+                playerColor.value = PieceColor.WHITE // Người tạo trận là trắng
+                listenToMatchUpdates()
+                startTimer()
+                return true
             }
+            false
         } catch (e: Exception) {
             matchmakingError.value = "Lỗi khi ghép cặp: ${e.message}"
             false
         }
     }
 
-    private fun createMatch(player1Id: String, player2Id: String) {
-        val matchId = db.collection("matches").document().id
-        this.matchId.value = matchId
-
-        val matchData = hashMapOf(
-            "matchId" to matchId,
-            "player1" to player1Id,
-            "player2" to player2Id,
-            "board" to boardToMap(game.getBoard()),
-            "currentTurn" to currentTurn.value.toString(),
-            "whiteTime" to 600,
-            "blackTime" to 600,
-            "status" to "waiting_for_opponent", // Hoặc "pending"
-            "winner" to null,
-            "drawRequest" to null,
-            "lastMove" to null,
-            "player1Joined" to (auth.currentUser?.uid == player1Id),
-            "player2Joined" to false
-        )
-
-        viewModelScope.launch {
-            try {
-                db.collection("matches")
-                    .document(matchId)
-                    .set(matchData)
-                    .await()
-
-                db.collection("matchmaking_queue").document(player1Id).delete()
-                db.collection("matchmaking_queue").document(player2Id).delete()
-
-                playerColor.value = if (auth.currentUser?.uid == player1Id) PieceColor.WHITE else PieceColor.BLACK
-                listenToMatchUpdates()
-                startTimer()
-            } catch (e: Exception) {
-                matchmakingError.value = "Lỗi khi tạo trận đấu: ${e.message}"
-            }
-        }
-    }
-
     fun listenToMatchUpdates() {
         matchId.value?.let { id ->
+            matchListener?.remove()
             matchListener = db.collection("matches")
                 .document(id)
                 .addSnapshotListener { snapshot, error ->
-                    if (error != null || snapshot == null) return@addSnapshotListener
+                    if (error != null || snapshot == null) {
+                        matchmakingError.value = "Lỗi nghe trận đấu: ${error?.message}"
+                        return@addSnapshotListener
+                    }
 
                     val matchDataValue = snapshot.data ?: return@addSnapshotListener
                     matchData.value = matchDataValue
@@ -208,26 +219,21 @@ class OnlineChessViewModel : ViewModel() {
                     if (boardData != null) {
                         board.value = mapToBoard(boardData)
                     }
-
                     currentTurn.value = PieceColor.valueOf(currentTurnStr ?: "WHITE")
                     whiteTime.value = (whiteTimeData ?: 600).toInt()
                     blackTime.value = (blackTimeData ?: 600).toInt()
                     drawRequest.value = drawRequestData
 
+                    if (playerColor.value == null) {
+                        playerColor.value = if (auth.currentUser?.uid == matchDataValue["player1"]) PieceColor.WHITE else PieceColor.BLACK
+                    }
+
                     if (status != "ongoing") {
                         isGameOver.value = true
                         gameResult.value = when (status) {
-                            "draw" -> "Ván đấu hòa theo thỏa thuận."
-                            "surrendered" -> if (winner == auth.currentUser?.uid) {
-                                "Bạn thắng vì đối thủ đầu hàng! (+10 điểm)"
-                            } else {
-                                "Đối thủ thắng vì bạn đầu hàng! (-5 điểm)"
-                            }
-                            "checkmate" -> if (winner == auth.currentUser?.uid) {
-                                "Bạn thắng vì chiếu hết! (+10 điểm)"
-                            } else {
-                                "Đối thủ thắng vì chiếu hết! (-5 điểm)"
-                            }
+                            "draw" -> "Ván đấu hòa."
+                            "surrendered" -> if (winner == auth.currentUser?.uid) "Bạn thắng!" else "Bạn thua!"
+                            "checkmate" -> if (winner == auth.currentUser?.uid) "Bạn thắng!" else "Bạn thua!"
                             else -> "Trò chơi kết thúc."
                         }
                         timerJob?.cancel()
@@ -269,7 +275,7 @@ class OnlineChessViewModel : ViewModel() {
     }
 
     fun onSquareClicked(row: Int, col: Int) {
-        if (isPromoting.value || playerColor.value != currentTurn.value) return
+        if (isPromoting.value || playerColor.value != currentTurn.value || matchId.value == null) return
 
         val position = Position(row, col)
         if (highlightedSquares.value.any { it.position == position }) {
@@ -335,7 +341,6 @@ class OnlineChessViewModel : ViewModel() {
                     )
                 )
 
-            // Cập nhật điểm số
             viewModelScope.launch {
                 try {
                     val player1Id = matchData.value?.get("player1") as? String
@@ -363,17 +368,17 @@ class OnlineChessViewModel : ViewModel() {
                                         transaction.update(player2Ref, "score", player2Score + 10)
                                         transaction.update(player1Ref, "score", (player1Score - 5).coerceAtLeast(0))
                                     } else {
-                                        // Trường hợp winner không hợp lệ
+                                        // Trường hợp winner là null hoặc không hợp lệ
                                     }
                                 }
                                 else -> {
-                                    // Xử lý trạng thái không xác định
+                                    // Xử lý các trạng thái khác (ví dụ: "ongoing" hoặc không xác định)
                                 }
                             }
                         }.await()
                     }
                 } catch (e: Exception) {
-                    // Xử lý lỗi nếu cần
+                    matchmakingError.value = "Lỗi cập nhật điểm: ${e.message}"
                 }
             }
         }
@@ -439,13 +444,12 @@ class OnlineChessViewModel : ViewModel() {
         }
     }
 
-    fun getPendingPromotion(): Position? = game.getPendingPromotion()
-
     fun cancelMatchmaking() {
         auth.currentUser?.uid?.let { userId ->
             db.collection("matchmaking_queue").document(userId).delete()
         }
         matchmakingJob?.cancel()
+        matchmakingListener?.remove()
         isMatchmaking.set(false)
         matchmakingError.value = null
     }
@@ -454,6 +458,7 @@ class OnlineChessViewModel : ViewModel() {
         super.onCleared()
         timerJob?.cancel()
         matchListener?.remove()
+        matchmakingListener?.remove()
         matchId.value?.let { id ->
             db.collection("matches").document(id).delete()
         }

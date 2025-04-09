@@ -31,7 +31,6 @@ import com.example.chessmate.viewmodel.OnlineChessViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.tasks.await
 
 @Composable
 fun PlayWithOpponentHeader(
@@ -436,37 +435,46 @@ fun PlayWithOpponentScreen(
         }
     }
 
-    // Lấy thông tin người chơi từ Firestore
+    // Lấy thông tin người chơi từ Firestore bằng snapshotListener
     LaunchedEffect(viewModel.matchId.value) {
         viewModel.matchId.value?.let { id ->
             val db = Firebase.firestore
-            val matchDoc = db.collection("matches").document(id).get().await()
-            val player1Id = matchDoc.getString("player1")
-            val player2Id = matchDoc.getString("player2")
-            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+            db.collection("matches").document(id)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
 
-            if (player1Id != null && player2Id != null) {
-                val player1Doc = db.collection("users").document(player1Id).get().await()
-                val player2Doc = db.collection("users").document(player2Id).get().await()
+                    val player1Id = snapshot.getString("player1")
+                    val player2Id = snapshot.getString("player2")
+                    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
-                // Sửa để lấy trường "name" hoặc "username" thay vì "displayName"
-                val player1Name = player1Doc.getString("name") ?: player1Doc.getString("username") ?: "Người chơi 1"
-                val player2Name = player2Doc.getString("name") ?: player2Doc.getString("username") ?: "Người chơi 2"
-                val player1Score = player1Doc.getLong("score")?.toInt() ?: 0
-                val player2Score = player2Doc.getLong("score")?.toInt() ?: 0
+                    if (player1Id != null && player2Id != null) {
+                        db.collection("users").document(player1Id)
+                            .addSnapshotListener { player1Doc, player1Error ->
+                                if (player1Error != null || player1Doc == null) return@addSnapshotListener
+                                val player1Name = player1Doc.getString("name") ?: player1Doc.getString("username") ?: "Người chơi 1"
+                                val player1Score = player1Doc.getLong("score")?.toInt() ?: 0
 
-                if (currentUserId == player1Id) {
-                    playerName = player1Name
-                    playerScore = player1Score
-                    opponentName = player2Name
-                    opponentScore = player2Score
-                } else {
-                    playerName = player2Name
-                    playerScore = player2Score
-                    opponentName = player1Name
-                    opponentScore = player1Score
+                                db.collection("users").document(player2Id)
+                                    .addSnapshotListener { player2Doc, player2Error ->
+                                        if (player2Error != null || player2Doc == null) return@addSnapshotListener
+                                        val player2Name = player2Doc.getString("name") ?: player2Doc.getString("username") ?: "Người chơi 2"
+                                        val player2Score = player2Doc.getLong("score")?.toInt() ?: 0
+
+                                        if (currentUserId == player1Id) {
+                                            playerName = player1Name
+                                            playerScore = player1Score
+                                            opponentName = player2Name
+                                            opponentScore = player2Score
+                                        } else {
+                                            playerName = player2Name
+                                            playerScore = player2Score
+                                            opponentName = player1Name
+                                            opponentScore = player1Score
+                                        }
+                                    }
+                            }
+                    }
                 }
-            }
         }
     }
 
