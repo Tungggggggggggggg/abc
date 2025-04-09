@@ -75,7 +75,7 @@ fun PlayWithOpponentHeader(
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.profile),
-                contentDescription = "Đối thủ",
+                contentDescription = "$opponentName",
                 modifier = Modifier.size(32.dp),
                 tint = Color.Black
             )
@@ -215,7 +215,7 @@ fun PlayWithOpponentFooter(
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.profile),
-                contentDescription = "Bạn",
+                contentDescription = "$playerName",
                 modifier = Modifier.size(32.dp),
                 tint = Color.Black
             )
@@ -449,8 +449,9 @@ fun PlayWithOpponentScreen(
                 val player1Doc = db.collection("users").document(player1Id).get().await()
                 val player2Doc = db.collection("users").document(player2Id).get().await()
 
-                val player1Name = player1Doc.getString("displayName") ?: "Người chơi 1"
-                val player2Name = player2Doc.getString("displayName") ?: "Người chơi 2"
+                // Sửa để lấy trường "name" hoặc "username" thay vì "displayName"
+                val player1Name = player1Doc.getString("name") ?: player1Doc.getString("username") ?: "Người chơi 1"
+                val player2Name = player2Doc.getString("name") ?: player2Doc.getString("username") ?: "Người chơi 2"
                 val player1Score = player1Doc.getLong("score")?.toInt() ?: 0
                 val player2Score = player2Doc.getLong("score")?.toInt() ?: 0
 

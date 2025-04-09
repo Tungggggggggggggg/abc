@@ -80,7 +80,7 @@ class OnlineChessViewModel : ViewModel() {
     private suspend fun tryMatchmaking(userId: String) {
         matchmakingJob?.cancel()
         matchmakingJob = viewModelScope.launch {
-            val timeoutSeconds = 30L
+            val timeoutSeconds = 60L // Tăng thời gian chờ lên 60 giây
             val startTime = System.currentTimeMillis()
 
             while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000) {
@@ -89,7 +89,7 @@ class OnlineChessViewModel : ViewModel() {
                     isMatchmaking.set(false)
                     return@launch
                 }
-                delay(1000L)
+                delay(2000L) // Giãn cách kiểm tra lên 2 giây để giảm tải
             }
 
             db.collection("matchmaking_queue").document(userId).delete()
@@ -123,7 +123,11 @@ class OnlineChessViewModel : ViewModel() {
                 val userDoc = transaction.get(userRef)
                 val opponentDoc = transaction.get(opponentRef)
 
-                if (userDoc.getString("status") == "waiting" && opponentDoc.getString("status") == "waiting") {
+                // Kiểm tra trạng thái của cả hai người chơi
+                if (userDoc.exists() && opponentDoc.exists() &&
+                    userDoc.getString("status") == "waiting" &&
+                    opponentDoc.getString("status") == "waiting"
+                ) {
                     transaction.update(userRef, "status", "matched")
                     transaction.update(opponentRef, "status", "matched")
                     true
@@ -357,16 +361,17 @@ class OnlineChessViewModel : ViewModel() {
                                         transaction.update(player2Ref, "score", player2Score + 10)
                                         transaction.update(player1Ref, "score", (player1Score - 5).coerceAtLeast(0))
                                     } else {
-
+                                        // Trường hợp winner không hợp lệ
                                     }
                                 }
                                 else -> {
-
+                                    // Xử lý trạng thái không xác định
                                 }
                             }
                         }.await()
                     }
                 } catch (e: Exception) {
+                    // Xử lý lỗi nếu cần
                 }
             }
         }
