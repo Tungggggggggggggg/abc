@@ -160,10 +160,12 @@ class OnlineChessViewModel : ViewModel() {
             "currentTurn" to currentTurn.value.toString(),
             "whiteTime" to 600,
             "blackTime" to 600,
-            "status" to "ongoing",
+            "status" to "waiting_for_opponent", // Hoặc "pending"
             "winner" to null,
             "drawRequest" to null,
-            "lastMove" to null
+            "lastMove" to null,
+            "player1Joined" to (auth.currentUser?.uid == player1Id),
+            "player2Joined" to false
         )
 
         viewModelScope.launch {
