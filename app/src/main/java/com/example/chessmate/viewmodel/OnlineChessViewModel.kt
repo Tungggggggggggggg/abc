@@ -75,6 +75,7 @@ class OnlineChessViewModel : ViewModel() {
             } catch (e: Exception) {
                 matchmakingError.value = "Không thể tham gia hàng đợi: ${e.message}"
                 isMatchmaking.set(false)
+                db.collection("matchmaking_queue").document(userId).delete()
             }
         }
     }
@@ -86,6 +87,7 @@ class OnlineChessViewModel : ViewModel() {
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     matchmakingError.value = "Lỗi nghe hàng đợi: ${error?.message}"
+                    isMatchmaking.set(false)
                     return@addSnapshotListener
                 }
 
@@ -101,7 +103,6 @@ class OnlineChessViewModel : ViewModel() {
                     isMatchmaking.set(false)
                     matchmakingListener?.remove()
                 } else if (status == "waiting") {
-                    // Gọi tryMatchmaking trong coroutine
                     viewModelScope.launch {
                         tryMatchmaking(userId)
                     }
@@ -150,7 +151,7 @@ class OnlineChessViewModel : ViewModel() {
                 "matchId" to matchId,
                 "player1" to userId,
                 "player2" to opponentId,
-                "board" to boardToMap(game.getBoard()),
+                "board" to boardToFlatMap(game.getBoard()), // Sử dụng định dạng phẳng
                 "currentTurn" to currentTurn.value.toString(),
                 "whiteTime" to 600,
                 "blackTime" to 600,
@@ -182,7 +183,7 @@ class OnlineChessViewModel : ViewModel() {
 
             if (success) {
                 this.matchId.value = matchId
-                playerColor.value = PieceColor.WHITE // Người tạo trận là trắng
+                playerColor.value = PieceColor.WHITE
                 listenToMatchUpdates()
                 startTimer()
                 return true
@@ -190,7 +191,8 @@ class OnlineChessViewModel : ViewModel() {
             false
         } catch (e: Exception) {
             matchmakingError.value = "Lỗi khi ghép cặp: ${e.message}"
-            false
+            db.collection("matchmaking_queue").document(userId).delete()
+            return false
         }
     }
 
@@ -208,7 +210,7 @@ class OnlineChessViewModel : ViewModel() {
                     val matchDataValue = snapshot.data ?: return@addSnapshotListener
                     matchData.value = matchDataValue
 
-                    val boardData = matchDataValue["board"] as? List<List<Map<String, Any?>>>
+                    val boardData = matchDataValue["board"] as? List<Map<String, Any?>>
                     val currentTurnStr = matchDataValue["currentTurn"] as? String
                     val whiteTimeData = matchDataValue["whiteTime"] as? Long
                     val blackTimeData = matchDataValue["blackTime"] as? Long
@@ -217,7 +219,7 @@ class OnlineChessViewModel : ViewModel() {
                     val drawRequestData = matchDataValue["drawRequest"] as? String
 
                     if (boardData != null) {
-                        board.value = mapToBoard(boardData)
+                        board.value = flatMapToBoard(boardData)
                     }
                     currentTurn.value = PieceColor.valueOf(currentTurnStr ?: "WHITE")
                     whiteTime.value = (whiteTimeData ?: 600).toInt()
@@ -315,6 +317,7 @@ class OnlineChessViewModel : ViewModel() {
 
     fun declineDraw() {
         matchId.value?.let { id ->
+            db.collection("matchmaking_queue").document(id).delete()
             db.collection("matches")
                 .document(id)
                 .update("drawRequest", null)
@@ -357,9 +360,7 @@ class OnlineChessViewModel : ViewModel() {
                             val player2Score = (player2Doc.getLong("score") ?: 0).toInt()
 
                             when (status) {
-                                "draw" -> {
-                                    // Không thay đổi điểm số khi hòa
-                                }
+                                "draw" -> {}
                                 "surrendered", "checkmate" -> {
                                     if (winner == player1Id) {
                                         transaction.update(player1Ref, "score", player1Score + 10)
@@ -371,9 +372,7 @@ class OnlineChessViewModel : ViewModel() {
                                         // Trường hợp winner là null hoặc không hợp lệ
                                     }
                                 }
-                                else -> {
-                                    // Xử lý các trạng thái khác (ví dụ: "ongoing" hoặc không xác định)
-                                }
+                                else -> {}
                             }
                         }.await()
                     }
@@ -395,7 +394,7 @@ class OnlineChessViewModel : ViewModel() {
                 .document(id)
                 .update(
                     mapOf(
-                        "board" to boardToMap(board.value),
+                        "board" to boardToFlatMap(board.value),
                         "currentTurn" to currentTurn.value.toString(),
                         "lastMove" to game.getLastMove()?.let { lastMove ->
                             mapOf(
@@ -408,40 +407,49 @@ class OnlineChessViewModel : ViewModel() {
         }
     }
 
-    private fun boardToMap(board: Array<Array<ChessPiece?>>): List<List<Map<String, Any?>>> {
-        return board.map { row ->
-            row.map { piece ->
-                if (piece == null) {
-                    mapOf("type" to null, "color" to null, "position" to null)
-                } else {
-                    mapOf(
-                        "type" to piece.type.toString(),
-                        "color" to piece.color.toString(),
-                        "position" to mapOf("row" to piece.position.row, "col" to piece.position.col)
+    // Chuyển bàn cờ thành danh sách phẳng
+    private fun boardToFlatMap(board: Array<Array<ChessPiece?>>): List<Map<String, Any?>> {
+        val flatList = mutableListOf<Map<String, Any?>>()
+        for (row in board.indices) {
+            for (col in board[row].indices) {
+                val piece = board[row][col]
+                if (piece != null) {
+                    flatList.add(
+                        mapOf(
+                            "type" to piece.type.toString(),
+                            "color" to piece.color.toString(),
+                            "position" to mapOf(
+                                "row" to row,
+                                "col" to col
+                            )
+                        )
                     )
                 }
             }
         }
+        return flatList
     }
 
-    private fun mapToBoard(boardData: List<List<Map<String, Any?>>>): Array<Array<ChessPiece?>> {
-        return Array(8) { row ->
-            Array(8) { col ->
-                val pieceData = boardData[row][col]
-                val type = pieceData["type"]?.toString()
-                val color = pieceData["color"]?.toString()
-                val positionData = pieceData["position"] as? Map<String, Long>
-                if (type != null && color != null && positionData != null) {
-                    ChessPiece(
+    // Chuyển từ danh sách phẳng về bàn cờ
+    private fun flatMapToBoard(boardData: List<Map<String, Any?>>): Array<Array<ChessPiece?>> {
+        val newBoard = Array(8) { Array<ChessPiece?>(8) { null } }
+        for (pieceData in boardData) {
+            val type = pieceData["type"]?.toString()
+            val color = pieceData["color"]?.toString()
+            val positionData = pieceData["position"] as? Map<String, Long>
+            if (type != null && color != null && positionData != null) {
+                val row = positionData["row"]?.toInt() ?: continue
+                val col = positionData["col"]?.toInt() ?: continue
+                if (row in 0..7 && col in 0..7) {
+                    newBoard[row][col] = ChessPiece(
                         type = PieceType.valueOf(type),
                         color = PieceColor.valueOf(color),
-                        position = Position(positionData["row"]!!.toInt(), positionData["col"]!!.toInt())
+                        position = Position(row, col)
                     )
-                } else {
-                    null
                 }
             }
         }
+        return newBoard
     }
 
     fun cancelMatchmaking() {
