@@ -1,0 +1,64 @@
+{
+  "project_info": {
+    "project_number": "734321254855",
+    "firebase_url": "https://chessmate-2c597-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "chessmate-2c597",
+    "storage_bucket": "chessmate-2c597.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:734321254855:android:70eeb61c49747d868ab9e2",
+        "android_client_info": {
+          "package_name": "com.example.chessmate"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "734321254855-8us1b2jvaveaav7ukhuuam8ieqq824bi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.chessmate",
+            "certificate_hash": "2cc8be12587e765e165db3cb8e0cb101b54b49fc"
+          }
+        },
+        {
+          "client_id": "734321254855-9v8pen6p88e0q2ot4fcmodma7ethgc0n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.chessmate",
+            "certificate_hash": "da67ff4369c5ddff3d9ba65a8b49c878c50d92dd"
+          }
+        },
+        {
+          "client_id": "734321254855-gc13oapjr9dm39tkln7eh5nur7h6lfl1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.chessmate",
+            "certificate_hash": "e0e38fdf46d02fa7ff3638e622d7e52296f42d78"
+          }
+        },
+        {
+          "client_id": "734321254855-higdjv79hl6msi0ilm4n8ifih4j3j1rp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDW7RS10eOs_q-lr15m-Gjt1Yd0nsUdz2M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "734321254855-higdjv79hl6msi0ilm4n8ifih4j3j1rp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
