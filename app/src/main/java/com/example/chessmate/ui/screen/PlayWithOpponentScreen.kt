@@ -40,6 +40,7 @@ fun PlayWithOpponentHeader(
     opponentScore: Int,
     whiteTime: Int,
     blackTime: Int,
+    playerColor: PieceColor?,
     modifier: Modifier = Modifier
 ) {
     var showExitDialog by remember { mutableStateOf(false) }
@@ -109,7 +110,7 @@ fun PlayWithOpponentHeader(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = formatTime(blackTime),
+                    text = formatTime(if (playerColor == PieceColor.BLACK) whiteTime else blackTime),
                     fontSize = 18.sp,
                     color = Color.Black,
                     fontWeight = FontWeight.Bold
@@ -193,6 +194,8 @@ fun PlayWithOpponentFooter(
     playerName: String,
     playerScore: Int,
     whiteTime: Int,
+    blackTime: Int,
+    playerColor: PieceColor?,
     onChatClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -300,7 +303,7 @@ fun PlayWithOpponentFooter(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = formatTime(whiteTime),
+                text = formatTime(if (playerColor == PieceColor.WHITE) whiteTime else blackTime),
                 fontSize = 18.sp,
                 color = Color.Black,
                 fontWeight = FontWeight.Bold
@@ -435,7 +438,6 @@ fun PlayWithOpponentScreen(
         }
     }
 
-    // Lấy thông tin người chơi từ Firestore bằng snapshotListener
     LaunchedEffect(viewModel.matchId.value) {
         viewModel.matchId.value?.let { id ->
             val db = Firebase.firestore
@@ -500,15 +502,29 @@ fun PlayWithOpponentScreen(
                 opponentName = opponentName,
                 opponentScore = opponentScore,
                 whiteTime = viewModel.whiteTime.value,
-                blackTime = viewModel.blackTime.value
+                blackTime = viewModel.blackTime.value,
+                playerColor = viewModel.playerColor.value
+            )
+            Text(
+                text = "Bạn là bên ${if (viewModel.playerColor.value == PieceColor.WHITE) "trắng" else "đen"}",
+                fontSize = 16.sp,
+                color = Color.White,
+                modifier = Modifier.padding(8.dp)
             )
             Chessboard(
                 board = viewModel.board.value,
                 highlightedSquares = viewModel.highlightedSquares.value,
                 onSquareClicked = { row, col -> viewModel.onSquareClicked(row, col) },
+                playerColor = viewModel.playerColor.value,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+            )
+            Text(
+                text = viewModel.moveHistory.lastOrNull() ?: "Chưa có nước đi",
+                fontSize = 14.sp,
+                color = Color.White,
+                modifier = Modifier.padding(8.dp)
             )
             PlayWithOpponentFooter(
                 onOfferDraw = { viewModel.requestDraw() },
@@ -518,14 +534,16 @@ fun PlayWithOpponentScreen(
                 },
                 playerName = playerName,
                 playerScore = playerScore,
-                whiteTime = viewModel.whiteTime.value
+                whiteTime = viewModel.whiteTime.value,
+                blackTime = viewModel.blackTime.value,
+                playerColor = viewModel.playerColor.value
             )
         }
     }
 
     if (viewModel.isPromoting.value) {
         PromotionDialog(
-            currentTurn = viewModel.currentTurn.value,
+            playerColor = viewModel.playerColor.value ?: PieceColor.WHITE,
             onSelect = { pieceType ->
                 viewModel.promotePawn(pieceType)
             },
@@ -617,7 +635,11 @@ fun PlayWithOpponentScreen(
                 Button(
                     onClick = {
                         showGameOverDialog = false
-                        navController?.popBackStack()
+                        if (navController != null) {
+                            navController.popBackStack()
+                        } else {
+                            onBackClick()
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colorResource(id = R.color.color_c89f9c)
@@ -630,6 +652,7 @@ fun PlayWithOpponentScreen(
                     )
                 }
             },
+            dismissButton = {},
             containerColor = colorResource(id = R.color.color_c97c5d)
         )
     }

@@ -21,6 +21,7 @@ class ChessViewModel : ViewModel() {
     val isGameOver = mutableStateOf(game.isGameOver())
     val gameResult = mutableStateOf<String?>(null)
     val isPromoting = mutableStateOf(false)
+    val playerColor = mutableStateOf(PieceColor.WHITE) // Thêm playerColor, mặc định là WHITE
 
     fun onSquareClicked(row: Int, col: Int) {
         val position = Position(row, col)
@@ -130,6 +131,7 @@ class FriendChessViewModel : ViewModel() {
     val whiteTime = mutableStateOf(600)
     val blackTime = mutableStateOf(600)
     val isPromoting = mutableStateOf(false)
+    val playerColor = mutableStateOf(PieceColor.WHITE) // Thêm playerColor, mặc định là WHITE
     private var timerJob: Job? = null
 
     init {

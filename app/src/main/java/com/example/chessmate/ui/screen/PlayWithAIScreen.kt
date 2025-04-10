@@ -156,6 +156,7 @@ fun PlayWithAIScreen(
                 board = viewModel.board.value,
                 highlightedSquares = viewModel.highlightedSquares.value,
                 onSquareClicked = { row, col -> viewModel.onSquareClicked(row, col) },
+                playerColor = viewModel.playerColor.value,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -166,7 +167,7 @@ fun PlayWithAIScreen(
 
     if (viewModel.isPromoting.value) {
         PromotionDialog(
-            currentTurn = viewModel.currentTurn.value,
+            playerColor = viewModel.playerColor.value,
             onSelect = { pieceType ->
                 viewModel.promotePawn(pieceType)
             },

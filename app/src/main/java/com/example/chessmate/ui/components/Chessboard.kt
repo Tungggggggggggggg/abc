@@ -27,32 +27,77 @@ fun Chessboard(
     board: Array<Array<ChessPiece?>>,
     highlightedSquares: List<Move>,
     onSquareClicked: (row: Int, col: Int) -> Unit,
+    playerColor: PieceColor?,
     modifier: Modifier = Modifier
 ) {
+    val isWhitePerspective = playerColor == PieceColor.WHITE || playerColor == null
+
     Column(
         modifier = modifier
             .wrapContentSize(Alignment.Center)
             .border(5.dp, colorResource(id = R.color.color_c89f9c))
             .padding(5.dp)
     ) {
+        // Nhãn cột (A-H hoặc H-A)
         Row(
             modifier = Modifier
                 .size(width = 360.dp, height = 20.dp)
                 .background(colorResource(id = R.color.color_c89f9c))
-        ) {}
+        ) {
+            Box(modifier = Modifier.size(width = 20.dp, height = 20.dp))
+            val cols = if (isWhitePerspective) ('A'..'H') else ('H' downTo 'A')
+            cols.forEach { letter ->
+                Box(
+                    modifier = Modifier
+                        .size(width = 40.dp, height = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = letter.toString(),
+                        fontSize = 14.sp,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            Box(modifier = Modifier.size(width = 20.dp, height = 20.dp))
+        }
+
+        // Bàn cờ
         Row {
+            // Nhãn hàng bên trái
             Column(
                 modifier = Modifier
                     .size(width = 20.dp, height = 320.dp)
                     .background(colorResource(id = R.color.color_c89f9c))
-            ) {}
+            ) {
+                val rows = if (isWhitePerspective) (8 downTo 1) else (1..8)
+                rows.forEach { rowLabel ->
+                    Box(
+                        modifier = Modifier
+                            .size(width = 20.dp, height = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = rowLabel.toString(),
+                            fontSize = 14.sp,
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            // Các ô trên bàn cờ
             Column {
-                for (row in 7 downTo 0) {
+                for (row in 0 until 8) {
+                    val displayRow = if (isWhitePerspective) 7 - row else row
                     Row {
                         for (col in 0 until 8) {
-                            val isWhiteSquare = (row + col) % 2 == 1
+                            val displayCol = if (isWhitePerspective) col else 7 - col
+                            val isWhiteSquare = (displayRow + displayCol) % 2 == 1
                             val squareColor = if (isWhiteSquare) Color.White else colorResource(id = R.color.color_b36a5e)
-                            val position = Position(row, col)
+                            val position = Position(displayRow, displayCol)
                             val highlight = highlightedSquares.find { it.position == position }
                             val isHighlighted = highlight != null
                             val isCaptureMove = highlight?.captures == true
@@ -61,10 +106,10 @@ fun Chessboard(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(squareColor)
-                                    .clickable { onSquareClicked(row, col) },
+                                    .clickable { onSquareClicked(displayRow, displayCol) },
                                 contentAlignment = Alignment.Center
                             ) {
-                                val piece = board[row][col]
+                                val piece = board[displayRow][displayCol]
                                 if (piece != null) {
                                     val pieceDrawable = getPieceDrawable(piece)
                                     Image(
@@ -88,16 +133,22 @@ fun Chessboard(
                     }
                 }
             }
-            Column {
-                for (row in 7 downTo 0) {
+
+            // Nhãn hàng bên phải
+            Column(
+                modifier = Modifier
+                    .size(width = 20.dp, height = 320.dp)
+                    .background(colorResource(id = R.color.color_c89f9c))
+            ) {
+                val rows = if (isWhitePerspective) (8 downTo 1) else (1..8)
+                rows.forEach { rowLabel ->
                     Box(
                         modifier = Modifier
-                            .size(width = 20.dp, height = 40.dp)
-                            .background(colorResource(id = R.color.color_c89f9c)),
+                            .size(width = 20.dp, height = 40.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "${row + 1}",
+                            text = rowLabel.toString(),
                             fontSize = 14.sp,
                             color = Color.White,
                             textAlign = TextAlign.Center
@@ -106,33 +157,30 @@ fun Chessboard(
                 }
             }
         }
-        Row {
-            Box(
-                modifier = Modifier
-                    .size(width = 20.dp, height = 20.dp)
-                    .background(colorResource(id = R.color.color_c89f9c))
-            )
-            for (col in 0 until 8) {
-                val letter = ('A' + col).toString()
+
+        // Nhãn cột dưới cùng
+        Row(
+            modifier = Modifier
+                .size(width = 360.dp, height = 20.dp)
+                .background(colorResource(id = R.color.color_c89f9c))
+        ) {
+            Box(modifier = Modifier.size(width = 20.dp, height = 20.dp))
+            val cols = if (isWhitePerspective) ('A'..'H') else ('H' downTo 'A')
+            cols.forEach { letter ->
                 Box(
                     modifier = Modifier
-                        .size(width = 40.dp, height = 20.dp)
-                        .background(colorResource(id = R.color.color_c89f9c)),
+                        .size(width = 40.dp, height = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = letter,
+                        text = letter.toString(),
                         fontSize = 14.sp,
                         color = Color.White,
                         textAlign = TextAlign.Center
                     )
                 }
             }
-            Box(
-                modifier = Modifier
-                    .size(width = 20.dp, height = 20.dp)
-                    .background(colorResource(id = R.color.color_c89f9c))
-            )
+            Box(modifier = Modifier.size(width = 20.dp, height = 20.dp))
         }
     }
 }

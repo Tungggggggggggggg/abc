@@ -17,6 +17,7 @@ import com.example.chessmate.ui.components.ButtonItem
 import com.example.chessmate.ui.components.Chessboard
 import com.example.chessmate.ui.components.Logo
 import com.example.chessmate.viewmodel.ChessViewModel
+import com.example.chessmate.model.PieceColor
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
@@ -100,7 +101,9 @@ fun HomeScreen(
                 Chessboard(
                     board = viewModel.board.value,
                     highlightedSquares = viewModel.highlightedSquares.value,
-                    onSquareClicked = { row, col -> viewModel.onSquareClicked(row, col) }
+                    onSquareClicked = { row, col -> viewModel.onSquareClicked(row, col) },
+                    playerColor = PieceColor.WHITE,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

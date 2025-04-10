@@ -19,7 +19,7 @@ import com.example.chessmate.model.PieceType
 
 @Composable
 fun PromotionDialog(
-    currentTurn: PieceColor,
+    playerColor: PieceColor,
     onSelect: (PieceType) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -47,13 +47,13 @@ fun PromotionDialog(
                 ) {
                     PromotionButton(
                         pieceType = PieceType.QUEEN,
-                        currentTurn = currentTurn,
+                        playerColor = playerColor,
                         onSelect = onSelect,
                         modifier = Modifier.weight(1f)
                     )
                     PromotionButton(
                         pieceType = PieceType.BISHOP,
-                        currentTurn = currentTurn,
+                        playerColor = playerColor,
                         onSelect = onSelect,
                         modifier = Modifier.weight(1f)
                     )
@@ -64,13 +64,13 @@ fun PromotionDialog(
                 ) {
                     PromotionButton(
                         pieceType = PieceType.KNIGHT,
-                        currentTurn = currentTurn,
+                        playerColor = playerColor,
                         onSelect = onSelect,
                         modifier = Modifier.weight(1f)
                     )
                     PromotionButton(
                         pieceType = PieceType.ROOK,
-                        currentTurn = currentTurn,
+                        playerColor = playerColor,
                         onSelect = onSelect,
                         modifier = Modifier.weight(1f)
                     )
@@ -86,15 +86,15 @@ fun PromotionDialog(
 @Composable
 fun PromotionButton(
     pieceType: PieceType,
-    currentTurn: PieceColor,
+    playerColor: PieceColor,
     onSelect: (PieceType) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val iconRes = when (pieceType) {
-        PieceType.QUEEN -> if (currentTurn == PieceColor.WHITE) R.drawable.white_queen else R.drawable.black_queen
-        PieceType.BISHOP -> if (currentTurn == PieceColor.WHITE) R.drawable.white_bishop else R.drawable.black_bishop
-        PieceType.KNIGHT -> if (currentTurn == PieceColor.WHITE) R.drawable.white_knight else R.drawable.black_knight
-        PieceType.ROOK -> if (currentTurn == PieceColor.WHITE) R.drawable.white_rook else R.drawable.black_rook
+        PieceType.QUEEN -> if (playerColor == PieceColor.WHITE) R.drawable.white_queen else R.drawable.black_queen
+        PieceType.BISHOP -> if (playerColor == PieceColor.WHITE) R.drawable.white_bishop else R.drawable.black_bishop
+        PieceType.KNIGHT -> if (playerColor == PieceColor.WHITE) R.drawable.white_knight else R.drawable.black_knight
+        PieceType.ROOK -> if (playerColor == PieceColor.WHITE) R.drawable.white_rook else R.drawable.black_rook
         else -> R.drawable.profile
     }
     val text = when (pieceType) {

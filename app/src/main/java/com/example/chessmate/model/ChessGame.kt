@@ -1,6 +1,10 @@
 package com.example.chessmate.model
 
-data class Move(val position: Position, val captures: Boolean)
+data class Move(
+    val from: Position,
+    val position: Position,
+    val captures: Boolean
+)
 
 class ChessGame {
     private var board: Array<Array<ChessPiece?>> = Array(8) { Array(8) { null } }
@@ -181,9 +185,9 @@ class ChessGame {
                 val startRow = if (piece.color == PieceColor.WHITE) 1 else 6
                 val targetRow = piece.position.row + direction
                 if (isInBounds(targetRow, piece.position.col) && board[targetRow][piece.position.col] == null) {
-                    moves.add(Move(Position(targetRow, piece.position.col), false))
+                    moves.add(Move(piece.position, Position(targetRow, piece.position.col), false))
                     if (piece.position.row == startRow && board[targetRow + direction][piece.position.col] == null) {
-                        moves.add(Move(Position(targetRow + direction, piece.position.col), false))
+                        moves.add(Move(piece.position, Position(targetRow + direction, piece.position.col), false))
                     }
                 }
                 for (colOffset in listOf(-1, 1)) {
@@ -192,7 +196,7 @@ class ChessGame {
                     if (isInBounds(newRow, newCol)) {
                         val targetPiece = board[newRow][newCol]
                         if (targetPiece != null && targetPiece.color != piece.color) {
-                            moves.add(Move(Position(newRow, newCol), true))
+                            moves.add(Move(piece.position, Position(newRow, newCol), true))
                         } else if (targetPiece == null && lastMove?.let { last ->
                                 last.second.row == piece.position.row &&
                                         last.second.col == newCol &&
@@ -200,7 +204,7 @@ class ChessGame {
                                         board[last.second.row][last.second.col]?.color != piece.color &&
                                         kotlin.math.abs(last.first.row - last.second.row) == 2
                             } == true) {
-                            moves.add(Move(Position(newRow, newCol), true))
+                            moves.add(Move(piece.position, Position(newRow, newCol), true))
                         }
                     }
                 }
@@ -216,7 +220,7 @@ class ChessGame {
                     if (isInBounds(newRow, newCol)) {
                         val targetPiece = board[newRow][newCol]
                         if (targetPiece == null || targetPiece.color != piece.color) {
-                            moves.add(Move(Position(newRow, newCol), targetPiece != null))
+                            moves.add(Move(piece.position, Position(newRow, newCol), targetPiece != null))
                         }
                     }
                 }
@@ -227,7 +231,7 @@ class ChessGame {
                     while (isInBounds(r, piece.position.col)) {
                         val targetPiece = board[r][piece.position.col]
                         if (targetPiece == null || targetPiece.color != piece.color) {
-                            moves.add(Move(Position(r, piece.position.col), targetPiece != null))
+                            moves.add(Move(piece.position, Position(r, piece.position.col), targetPiece != null))
                         }
                         if (targetPiece != null) break
                         r += direction
@@ -236,7 +240,7 @@ class ChessGame {
                     while (isInBounds(piece.position.row, c)) {
                         val targetPiece = board[piece.position.row][c]
                         if (targetPiece == null || targetPiece.color != piece.color) {
-                            moves.add(Move(Position(piece.position.row, c), targetPiece != null))
+                            moves.add(Move(piece.position, Position(piece.position.row, c), targetPiece != null))
                         }
                         if (targetPiece != null) break
                         c += direction
@@ -251,7 +255,7 @@ class ChessGame {
                         while (isInBounds(r, c)) {
                             val targetPiece = board[r][c]
                             if (targetPiece == null || targetPiece.color != piece.color) {
-                                moves.add(Move(Position(r, c), targetPiece != null))
+                                moves.add(Move(piece.position, Position(r, c), targetPiece != null))
                             }
                             if (targetPiece != null) break
                             r += rowDir
@@ -273,7 +277,7 @@ class ChessGame {
                         if (isInBounds(newRow, newCol)) {
                             val targetPiece = board[newRow][newCol]
                             if (targetPiece == null || targetPiece.color != piece.color) {
-                                moves.add(Move(Position(newRow, newCol), targetPiece != null))
+                                moves.add(Move(piece.position, Position(newRow, newCol), targetPiece != null))
                             }
                         }
                     }
@@ -292,13 +296,13 @@ class ChessGame {
                     !isSquareUnderAttack(piece.color, Position(0, 5)) &&
                     !isSquareUnderAttack(piece.color, Position(0, 6))
                 ) {
-                    moves.add(Move(Position(0, 6), false))
+                    moves.add(Move(piece.position, Position(0, 6), false))
                 }
                 if (!hasMoved["white_queenside_rook"]!! && board[0][1] == null && board[0][2] == null && board[0][3] == null &&
                     !isSquareUnderAttack(piece.color, Position(0, 2)) &&
                     !isSquareUnderAttack(piece.color, Position(0, 3))
                 ) {
-                    moves.add(Move(Position(0, 2), false))
+                    moves.add(Move(piece.position, Position(0, 2), false))
                 }
             }
             if (piece.color == PieceColor.BLACK && row == 7 && !hasMoved["black_king"]!!) {
@@ -306,13 +310,13 @@ class ChessGame {
                     !isSquareUnderAttack(piece.color, Position(7, 5)) &&
                     !isSquareUnderAttack(piece.color, Position(7, 6))
                 ) {
-                    moves.add(Move(Position(7, 6), false))
+                    moves.add(Move(piece.position, Position(7, 6), false))
                 }
                 if (!hasMoved["black_queenside_rook"]!! && board[7][1] == null && board[7][2] == null && board[7][3] == null &&
                     !isSquareUnderAttack(piece.color, Position(7, 2)) &&
                     !isSquareUnderAttack(piece.color, Position(7, 3))
                 ) {
-                    moves.add(Move(Position(7, 2), false))
+                    moves.add(Move(piece.position, Position(7, 2), false))
                 }
             }
         }

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.chessmate.R
+import com.example.chessmate.model.PieceColor
 import com.example.chessmate.ui.components.ButtonItem
 import com.example.chessmate.ui.components.Chessboard
 import com.example.chessmate.ui.components.Logo
@@ -153,7 +154,9 @@ fun MainScreen(
             Chessboard(
                 board = viewModel.board.value,
                 highlightedSquares = viewModel.highlightedSquares.value,
-                onSquareClicked = { row, col -> viewModel.onSquareClicked(row, col) }
+                onSquareClicked = { row, col -> viewModel.onSquareClicked(row, col) },
+                playerColor = PieceColor.WHITE,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
