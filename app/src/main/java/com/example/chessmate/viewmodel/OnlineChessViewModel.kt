@@ -20,6 +20,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.atomic.AtomicBoolean
+import android.util.Log
 
 class OnlineChessViewModel : ViewModel() {
     private val db: FirebaseFirestore = Firebase.firestore
@@ -58,33 +59,54 @@ class OnlineChessViewModel : ViewModel() {
     }
 
     fun startMatchmaking() {
-        val userId = auth.currentUser?.uid ?: run {
+        Log.d("Matchmaking", "startMatchmaking() được gọi")
+        val userId = auth.currentUser?.uid
+        Log.d("Matchmaking", "userId: $userId")
+
+        if (userId == null) {
             matchmakingError.value = "Vui lòng đăng nhập để chơi trực tuyến."
+            Log.e("Matchmaking", "Người dùng chưa đăng nhập")
             return
         }
-        if (isMatchmaking.get()) return
+
+        if (isMatchmaking.get()) {
+            Log.d("Matchmaking", "Đang trong quá trình tìm kiếm rồi, bỏ qua")
+            return
+        }
 
         isMatchmaking.set(true)
+        Log.d("Matchmaking", "Bắt đầu quá trình tìm kiếm")
+
         val queueData = hashMapOf(
             "userId" to userId,
             "timestamp" to FieldValue.serverTimestamp(),
             "status" to "waiting",
             "matchId" to null
         )
+        Log.d("Matchmaking", "Dữ liệu hàng đợi được tạo: $queueData")
 
         viewModelScope.launch {
+            Log.d("Matchmaking", "Coroutine được khởi chạy")
             try {
+                Log.d("Matchmaking", "Đang cố gắng ghi vào matchmaking_queue với userId: $userId")
                 db.collection("matchmaking_queue")
                     .document(userId)
                     .set(queueData)
                     .await()
+                Log.d("Matchmaking", "Ghi vào matchmaking_queue thành công")
                 listenForMatchmaking(userId)
+                Log.d("Matchmaking", "Đã gọi listenForMatchmaking()")
             } catch (e: Exception) {
+                Log.e("Matchmaking", "Lỗi khi tham gia hàng đợi: ${e.message}", e)
                 matchmakingError.value = "Không thể tham gia hàng đợi: ${e.message}"
                 isMatchmaking.set(false)
+                Log.d("Matchmaking", "Đã đặt isMatchmaking thành false")
                 db.collection("matchmaking_queue").document(userId).delete()
+                Log.d("Matchmaking", "Đã xóa khỏi matchmaking_queue do lỗi")
             }
+            Log.d("Matchmaking", "Coroutine kết thúc")
         }
+        Log.d("Matchmaking", "Hàm startMatchmaking() kết thúc")
     }
 
     private fun listenForMatchmaking(userId: String) {
