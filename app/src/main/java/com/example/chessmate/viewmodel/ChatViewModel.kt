@@ -51,11 +51,14 @@ class ChatViewModel : ViewModel() {
                     .addOnSuccessListener { result2 ->
                         val allDocs = result1.documents + result2.documents
                         val friendList = mutableListOf<FriendWithLastMessage>()
+                        val processedFriendIds = mutableSetOf<String>()
+
                         allDocs.forEach { doc ->
                             val user1 = doc.getString("user1")
                             val user2 = doc.getString("user2")
                             val friendId = if (user1 == currentUserId) user2 else user1
-                            if (!friendId.isNullOrBlank()) {
+                            if (!friendId.isNullOrBlank() && friendId !in processedFriendIds) {
+                                processedFriendIds.add(friendId)
                                 firestore.collection("users").document(friendId).get()
                                     .addOnSuccessListener { userDoc ->
                                         val name = userDoc.getString("name") ?: "Không xác định"
