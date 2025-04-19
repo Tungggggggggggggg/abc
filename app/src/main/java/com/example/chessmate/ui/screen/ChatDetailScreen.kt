@@ -94,7 +94,7 @@ fun MessageItem(
         Box(
             modifier = Modifier
                 .background(
-                    if (isCurrentUser) Color(0xFFBBDEFB) else Color.White,
+                    if (isCurrentUser) colorResource(id = R.color.color_c98e7d) else colorResource(id = R.color.color_dbbbb1),
                     RoundedCornerShape(
                         topStart = 12.dp,
                         topEnd = 12.dp,
@@ -172,7 +172,22 @@ fun ChatInput(
                 value = messageText,
                 onValueChange = onMessageChange,
                 placeholder = { Text("Nhập tin nhắn...") },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                colors = TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Black,
+                    unfocusedIndicatorColor = Color.Black,
+                    disabledIndicatorColor = Color.Black,
+                    errorIndicatorColor = Color.Black,
+                    focusedContainerColor = colorResource(id = R.color.color_c89f9c),
+                    unfocusedContainerColor = colorResource(id = R.color.color_c89f9c),
+                    disabledContainerColor = colorResource(id = R.color.color_c89f9c),
+                    errorContainerColor = colorResource(id = R.color.color_c89f9c),
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    focusedPlaceholderColor = Color.Black,
+                    unfocusedPlaceholderColor = Color.Black,
+                    cursorColor = Color.Black
+                )
             )
             IconButton(onClick = onSendMessage) {
                 Image(

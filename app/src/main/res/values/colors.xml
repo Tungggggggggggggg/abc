@@ -13,7 +13,8 @@
     <color name="color_c89f9c">#C89F9C</color>
     <color name="color_c97c5d">#C97C5D</color>
     <color name="color_b36a5e">#B36A5E</color>
-
+    <color name="color_c98e7d">#C98E7D</color>
+    <color name="color_dbbbb1">#DBBBB1</color>
     <color name="win_background">#D5F5E3</color>
     <color name="lose_background">#FADBD8</color>
     <color name="draw_background">#D7CCC8</color>
