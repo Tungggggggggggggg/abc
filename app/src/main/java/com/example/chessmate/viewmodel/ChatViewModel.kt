@@ -39,7 +39,6 @@ class ChatViewModel : ViewModel() {
         loadFriendsWithMessages()
     }
 
-    // Tải danh sách bạn bè và tin nhắn mới nhất
     fun loadFriendsWithMessages() {
         val currentUserId = auth.currentUser?.uid ?: return
         firestore.collection("friends")
@@ -57,7 +56,6 @@ class ChatViewModel : ViewModel() {
                             val user2 = doc.getString("user2")
                             val friendId = if (user1 == currentUserId) user2 else user1
                             if (!friendId.isNullOrBlank()) {
-                                // Lấy thông tin bạn bè
                                 firestore.collection("users").document(friendId).get()
                                     .addOnSuccessListener { userDoc ->
                                         val name = userDoc.getString("name") ?: "Không xác định"
@@ -65,7 +63,6 @@ class ChatViewModel : ViewModel() {
                                         val isOnline = userDoc.getBoolean("isOnline") ?: false
                                         val friend = User(friendId, name, email, isOnline)
 
-                                        // Lấy tin nhắn mới nhất
                                         val conversationId = getConversationId(currentUserId, friendId)
                                         firestore.collection("conversations")
                                             .document(conversationId)
@@ -135,8 +132,6 @@ class ChatViewModel : ViewModel() {
                     message.senderId != currentUserId && !message.readBy.contains(currentUserId)
                 }
                 Log.d("ChatViewModel", "Messages loaded: ${messages.size}")
-
-                loadFriendsWithMessages()
             }
     }
 

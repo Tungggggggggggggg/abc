@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -117,14 +118,14 @@ fun MessageItem(
 fun ChatDetailContent(
     messages: List<ChatMessage>,
     currentUserId: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    listState: LazyListState
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(colorResource(id = R.color.color_c97c5d))
     ) {
-        val listState = rememberLazyListState()
         LaunchedEffect(messages) {
             if (messages.isNotEmpty()) {
                 delay(100)
@@ -195,13 +196,17 @@ fun ChatDetailScreen(
     val messages by viewModel.messages.collectAsState()
     val hasUnreadMessages by viewModel.hasUnreadMessages.collectAsState()
     var messageText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(friendId) {
         val currentUserId = viewModel.currentUserId ?: ""
         val conversationId = viewModel.getConversationId(currentUserId, friendId)
         Log.d("ChatDetailScreen", "Friend ID: $friendId, Conversation ID: $conversationId")
         viewModel.listenToChatMessages(friendId)
-        if (hasUnreadMessages) {
+    }
+
+    LaunchedEffect(messages, listState.firstVisibleItemIndex) {
+        if (messages.isNotEmpty() && hasUnreadMessages) {
             viewModel.markMessagesAsRead(friendId)
         }
     }
@@ -216,7 +221,8 @@ fun ChatDetailScreen(
         ChatDetailContent(
             messages = messages,
             currentUserId = viewModel.currentUserId,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            listState = listState
         )
         ChatInput(
             messageText = messageText,
