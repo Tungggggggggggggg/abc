@@ -3,11 +3,7 @@ package com.example.chessmate.viewmodel
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.chessmate.model.ChessGame
-import com.example.chessmate.model.Move
-import com.example.chessmate.model.PieceColor
-import com.example.chessmate.model.PieceType
-import com.example.chessmate.model.Position
+import com.example.chessmate.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job

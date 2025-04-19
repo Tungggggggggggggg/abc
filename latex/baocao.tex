@@ -7,10 +7,16 @@
 \usepackage{geometry} % Để chỉnh lề trang
 \usepackage{mathptmx} % Sử dụng font Times New Roman
 \geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=2cm}
+\usepackage{ragged2e} % Để căn đều hai bên
+\usepackage{setspace} % Để điều chỉnh khoảng cách dòng
+\usepackage{parskip} % Thêm gói parskip
+\usepackage{enumitem} % Để tùy chỉnh danh sách
+\usepackage{hyperref} % Thêm gói hyperref để hỗ trợ link
 
 \begin{document}
 
 % Trang bìa
+\thispagestyle{empty} % Lệnh bỏ đánh số trang cho trang hiện tại
 \begin{center}
     \textbf{BỘ GIAO THÔNG VẬN TẢI}\\
     \textbf{TRƯỜNG ĐẠI HỌC GIAO THÔNG VẬN TẢI TP. HỒ CHÍ MINH}\\
@@ -39,5 +45,553 @@
 
     \textbf{TP. Hồ Chí Minh - 2025}
 \end{center}
+
+
+\newpage % Bắt đầu trang mới cho Lời cảm ơn
+\thispagestyle{empty} % Lệnh bỏ đánh số trang cho trang hiện tại
+
+\begin{center}
+    \textbf{\Large LỜI CẢM ƠN}
+\end{center}
+
+\onehalfspacing % Đặt khoảng cách dòng là 1.5
+
+\justify % Bắt đầu căn đều hai bên cho các đoạn văn
+
+\noindent Chúng em xin gửi lời cảm ơn chân thành đến Ban Giám hiệu Trường Đại học Giao thông Vận tải đã tạo điều kiện thuận lợi, giúp chúng em có được môi trường học tập và nghiên cứu lý tưởng nhất. Trong quá trình thực hiện đồ án Lập trình thiết bị di động, em xin chân thành gửi lời cảm ơn đến Thầy Trương Quang Tuấn – người đã tận tình giảng dạy và hướng dẫn em trong suốt quá trình học tập và thực hiện đề tài này.
+
+\noindent Thầy không chỉ cung cấp những kiến thức chuyên môn quý báu mà còn luôn khuyến khích, tạo điều kiện để em rèn luyện khả năng tư duy, sáng tạo và ứng dụng thực tiễn.
+
+\noindent Mặc dù đã rất cố gắng, nhưng do kiến thức còn hạn chế và thời gian nghiên cứu có giới hạn, đồ án vẫn còn nhiều thiếu sót. Chúng em mong thầy có thể bỏ qua những sai sót đó và dành cho chúng em những góp ý chân thành. Những đóng góp quý báu của thầy sẽ là kinh nghiệm vô cùng quý giá, giúp chúng em tự tin hơn trong việc hoàn thiện các dự án tiếp theo.
+
+\noindent Một lần nữa, em xin chân thành cảm ơn!
+
+\newpage % Bắt đầu một trang mới
+\thispagestyle{empty} % Lệnh bỏ đánh số trang cho trang hiện tại
+
+\section*{\centering \fontsize{16pt}{\baselineskip}\selectfont \textbf{BẢNG PHÂN CÔNG CÔNG VIỆC CHO CÁC THÀNH VIÊN}} %Tiêu đề trang, căn giữa, in đậm
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{MSSV} & \textbf{Họ và tên} & \textbf{Nhiệm vụ} \\
+\hline
+2251120259& Nguyễn Quốc Tùng & ... \\
+\hline
+2251120222 & Nguyễn Nhật Lâm & ... \\
+\hline
+2251120217 & Nguyễn Phi Khanh & ... \\
+\hline
+\end{tabular}
+\end{center}
+
+\newpage
+\thispagestyle{empty} % Lệnh bỏ đánh số trang cho trang hiện tại
+
+\tableofcontents
+
+\newpage % Bắt đầu trang mới cho Lời mở đầu
+
+\pagenumbering{roman} % Đặt kiểu đánh số trang là chữ số La Mã thường
+
+\section*{\centering LỜI MỞ ĐẦU} % Thêm tiêu đề LỜI MỞ ĐẦU vào mục lục
+\addcontentsline{toc}{section}{LỜI MỞ ĐẦU}
+
+\onehalfspacing
+\justify
+\noindent Trong thời đại công nghệ phát triển mạnh mẽ, các ứng dụng di động ngày càng trở nên phổ biến và đóng vai trò quan trọng trong đời sống hằng ngày. Việc kết hợp giữa công nghệ và các trò chơi truyền thống như cờ vua đã tạo ra nhiều cơ hội để phát triển những ứng dụng giải trí vừa mang tính trí tuệ, vừa tiện lợi và hấp dẫn.
+
+\noindent Đồ án “Ứng dụng ChessMate – Chơi cờ vua trên Android” được xây dựng nhằm cung cấp một nền tảng chơi cờ linh hoạt, hỗ trợ nhiều chế độ chơi như chơi với bạn bè, chơi với AI, chơi online, cùng với các tính năng quản lý tài khoản, kết bạn, và xem lịch sử trận đấu.
+
+\noindent Đồ án được thực hiện bằng ngôn ngữ Kotlin, sử dụng Jetpack Compose để thiết kế giao diện, và Firestore làm nền tảng dữ liệu. Đồng thời, mô hình MVVM được áp dụng nhằm đảm bảo khả năng mở rộng, bảo trì và phát triển ứng dụng một cách dễ dàng.
+
+\bigskip % Thêm một khoảng trắng nhỏ sau đoạn văn cuối (tùy chọn)
+
+
+\newpage % Bắt đầu nội dung chính của báo cáo
+
+\pagenumbering{arabic} % Đặt lại kiểu đánh số trang là chữ số Ả Rập
+\setcounter{page}{1} % Đặt lại số trang bắt đầu từ 1 cho nội dung chính
+
+\section*{\centering \textbf{CHƯƠNG 1: GIỚI THIỆU ĐỀ TÀI}} % Heading 1 in đậm và căn giữa
+\addcontentsline{toc}{section}{CHƯƠNG 1: GIỚI THIỆU ĐỀ TÀI}
+
+% Nội dung chương 1 (bạn sẽ thêm vào đây)
+
+\subsection*{1.1. Lý do chọn đề tài} % Heading 2
+\addcontentsline{toc}{subsection}{1.1. Lý do chọn đề tài}
+% Nội dung mục 1.1
+
+\justify % Đảm bảo đoạn văn được căn đều hai bên
+\noindent Cờ vua là một trò chơi trí tuệ lâu đời, đòi hỏi sự tư duy, tính toán chiến lược và khả năng phản xạ. Việc phát triển một ứng dụng chơi cờ vua trên nền tảng di động không chỉ là cơ hội để vận dụng các kiến thức lập trình đã học mà còn nhằm tạo ra một công cụ giải trí hữu ích, giúp người dùng có thể chơi và học hỏi mọi lúc, mọi nơi.
+
+\noindent Ngoài ra, xu hướng kết nối người dùng thông qua mạng Internet và các dịch vụ đám mây như Firebase đã mở ra nhiều tiềm năng cho các ứng dụng tương tác thời gian thực như cờ vua trực tuyến. Do đó, em quyết định chọn đề tài này để vừa học hỏi, vừa ứng dụng thực tế.
+
+\subsection*{1.2. Mục tiêu của đồ án} % Heading 2
+\addcontentsline{toc}{subsection}{1.2. Mục tiêu của đồ án}
+
+\justify
+\begin{itemize}[label=·] % Sử dụng itemize với dấu bullet tùy chỉnh
+    \item Xây dựng một ứng dụng cờ vua hoàn chỉnh, giao diện thân thiện, dễ sử dụng.
+    \item Cung cấp các chế độ chơi: chơi với bạn (trên cùng thiết bị), chơi với AI, và chơi online với bạn bè.
+    \item Tích hợp đăng nhập Google, đăng ký, quên mật khẩu thông qua Firebase Authentication.
+    \item Cho phép người dùng kết bạn, tìm kiếm bạn bè, xem và chỉnh sửa thông tin cá nhân.
+    \item Lưu trữ và hiển thị lịch sử các trận đấu, xếp hạng người chơi.
+    \item Áp dụng mô hình kiến trúc MVVM nhằm đảm bảo tính linh hoạt và dễ bảo trì.
+\end{itemize}
+
+\subsection*{1.3. Phạm vi nghiên cứu}
+\addcontentsline{toc}{subsection}{1.3. Phạm vi nghiên cứu}
+
+\justify
+\noindent Nội dung và phạm vi của đồ án bao gồm:
+\begin{itemize}[label=·]
+    \item Thiết kế và phát triển ứng dụng di động chạy trên nền tảng Android bằng Kotlin.
+    \item Xây dựng các chức năng chính: đăng nhập, đăng ký, chơi cờ với nhiều chế độ khác nhau.
+    \item Tích hợp Google Sign-In, Firebase Authentication và Firestore.
+    \item Thiết kế giao diện người dùng với Jetpack Compose.
+    \item Triển khai các thuật toán AI cơ bản để chơi cờ với máy (Minimax, Alpha-Beta Pruning).
+    \item Sử dụng mô hình MVVM để quản lý luồng dữ liệu và giao diện.
+\end{itemize}
+\noindent Không bao gồm các nền tảng khác ngoài Android (như iOS hay web), cũng như các tính năng nâng cao như phân tích ván cờ chuyên sâu hay hệ thống trò chuyện thời gian thực.
+
+\subsection*{1.4. Phương pháp nghiên cứu}
+\addcontentsline{toc}{subsection}{1.4. Phương pháp nghiên cứu}
+
+\justify
+\noindent Mô tả các phương pháp và kỹ thuật được sử dụng trong quá trình thực hiện đồ án.
+\begin{itemize}[label=·]
+    \item Nghiên cứu tài liệu: Tìm hiểu các công nghệ sử dụng như Jetpack Compose, Firebase, Firestore, Google Authentication, cùng với các thuật toán AI cơ bản cho cờ vua.
+    \item Phân tích và thiết kế hệ thống: Ứng dụng mô hình MVVM để phân tách các thành phần và xử lý luồng dữ liệu hiệu quả.
+    \item Xây dựng và triển khai: Viết mã bằng Kotlin, thiết kế giao diện bằng Compose, và triển khai các tính năng theo từng bước.
+    \item Kiểm thử và đánh giá: Kiểm tra tính năng và hiệu suất của ứng dụng trên nhiều thiết bị Android khác nhau.
+    \item Tham khảo ứng dụng thực tế: Phân tích các ứng dụng chơi cờ vua phổ biến để học hỏi giao diện và trải nghiệm người dùng.
+\end{itemize}
+
+\section*{\centering \textbf{CHƯƠNG 2: PHÂN TÍCH HỆ THỐNG}} % Heading 1 không đánh số, căn giữa, in đậm
+\addcontentsline{toc}{section}{CHƯƠNG 2: PHÂN TÍCH HỆ THỐNG}
+
+\subsection*{2.1. Khảo sát hiện trạng} % Heading 2 
+\addcontentsline{toc}{subsection}{2.1. Khảo sát hiện trạng}
+
+\justify
+\noindent Hiện nay, trên thị trường có nhiều ứng dụng chơi cờ vua như: Chess.com, lichess.org, Play Magnus,... Các ứng dụng này đều cung cấp các tính năng đa dạng như: chơi với AI, chơi trực tuyến, xếp hạng người chơi, phân tích ván cờ,... Tuy nhiên, phần lớn các ứng dụng đều được phát triển bởi đội ngũ lớn và mang tính thương mại cao.
+
+\noindent Với đề tài ChessMate, mục tiêu hướng đến là xây dựng một ứng dụng đơn giản, dễ sử dụng, tích hợp các tính năng cốt lõi như:
+\begin{itemize}[label=·]
+    \item Chơi với bạn (trên cùng thiết bị)
+    \item Chơi với AI
+    \item Chơi online
+    \item Đăng nhập, đăng ký, khôi phục mật khẩu
+    \item Kết bạn, tìm kiếm người chơi
+    \item Lưu lịch sử trận đấu
+    \item Xem và chỉnh sửa thông tin cá nhân
+    \item Xếp hạng người chơi
+\end{itemize}
+\noindent Ứng dụng này hướng đến người dùng phổ thông yêu thích cờ vua và mong muốn trải nghiệm trên thiết bị di động Android.
+
+\subsection*{2.2. Phân tích yêu cầu hệ thống} % Heading 2 
+\addcontentsline{toc}{subsection}{2.2. Phân tích yêu cầu hệ thống}
+\subsubsection*{2.2.1. Yêu cầu chức năng} % Heading 3
+\addcontentsline{toc}{subsubsection}{2.2.1. Yêu cầu chức năng}
+
+\paragraph{Tài khoản người dùng:} % Paragraph 
+\begin{itemize}[label=·]
+    \item Đăng ký, đăng nhập bằng email và mật khẩu
+    \item Đăng nhập bằng Google (Firebase Authentication)
+    \item Quên mật khẩu và gửi email đặt lại mật khẩu
+\end{itemize}
+
+\paragraph{Tính năng bạn bè:} % Paragraph 
+\begin{itemize}[label=·]
+    \item Tìm kiếm người chơi theo tên người dùng
+    \item Gửi và chấp nhận lời mời kết bạn
+    \item Xem danh sách bạn bè
+    \item Xem thông tin cá nhân của bạn bè
+\end{itemize}
+
+\paragraph{Chơi cờ:} % Paragraph 
+\begin{itemize}[label=·]
+    \item Chế độ chơi với bạn: hai người cùng chơi trên cùng thiết bị
+    \item Chế độ chơi với AI: sử dụng thuật toán để tự động xử lý nước đi
+    \item Chế độ ghép trận online: tìm và ghép người chơi để thi đấu trực tuyến
+\end{itemize}
+
+\paragraph{Thông tin người chơi:} % Paragraph 
+\begin{itemize}[label=·]
+    \item Xem và chỉnh sửa thông tin cá nhân (tên, ảnh đại diện,...)
+    \item Xem thông tin người chơi khác
+\end{itemize}
+
+\paragraph{Lịch sử và xếp hạng:} % Paragraph 
+\begin{itemize}[label=·]
+    \item Lưu lại các ván cờ đã chơi
+    \item Hiển thị lịch sử và chi tiết từng trận đấu
+    \item Xếp hạng người chơi dựa trên số trận thắng/thua
+\end{itemize}
+
+\subsubsection*{2.2.2. Yêu cầu phi chức năng} % Heading 3 
+\addcontentsline{toc}{subsubsection}{2.2.2. Yêu cầu phi chức năng}
+
+\justify
+\begin{itemize}[label=·]
+    \item \textbf{Tính ổn định:} Ứng dụng hoạt động ổn định trên các thiết bị Android phổ biến.
+    \item \textbf{Tính bảo mật:} Sử dụng Firebase Authentication đảm bảo an toàn cho thông tin người dùng.
+    \item \textbf{Tính phản hồi:} Giao diện phản hồi nhanh, thao tác mượt mà, không gây giật lag.
+    \item \textbf{Khả năng mở rộng:} Có thể dễ dàng thêm các tính năng như: chat, phân tích nước đi, chơi nhiều bàn cùng lúc,…
+\end{itemize}
+
+\subsection*{2.3. Sơ đồ use case hệ thống} % Heading 2 
+\addcontentsline{toc}{subsubsection}{2.3. Sơ đồ use case hệ thống}
+
+\justify
+\noindent \textbf{Tác nhân (Actor):}
+\begin{itemize}[label=·]
+    \item \textbf{Người dùng:} Đăng ký, đăng nhập, chơi cờ, kết bạn, xem hồ sơ, chỉnh sửa thông tin, xem lịch sử trận đấu, xếp hạng.
+    \item \textbf{Hệ thống:} Xử lý xác thực, lưu trữ dữ liệu Firestore, quản lý kết nối online, xử lý logic AI, thống kê trận đấu.
+\end{itemize}
+
+\noindent \textbf{Các use case chính:}
+\begin{itemize}[label=·]
+    \item Đăng nhập/đăng ký tài khoản
+    \item Chơi với AI
+    \item Chơi với bạn
+    \item Ghép trận online
+    \item Tìm kiếm và kết bạn
+    \item Xem thông tin cá nhân và chỉnh sửa
+    \item Xem lịch sử các trận đấu
+    \item Xếp hạng người chơi
+\end{itemize}
+
+\subsection*{2.4. Kiến trúc hệ thống} % Heading 2 
+\addcontentsline{toc}{subsection}{2.4. Kiến trúc hệ thống}
+
+\justify
+\noindent Hệ thống được xây dựng dựa trên kiến trúc MVVM (Model – View – ViewModel) nhằm phân tách rõ ràng các thành phần, giúp dễ quản lý và bảo trì:
+\begin{itemize}[label=·]
+    \item \textbf{Model:} Xử lý dữ liệu (Firestore, Authentication, thuật toán AI,...)
+    \item \textbf{View:} Giao diện người dùng (được xây dựng bằng Jetpack Compose)
+    \item \textbf{ViewModel:} Trung gian điều phối logic giữa Model và View, giúp cập nhật dữ liệu và trạng thái UI theo thời gian thực.
+\end{itemize}
+
+\section*{\centering \textbf{CHƯƠNG 3: THIẾT KẾ HỆ THỐNG}} % Heading 1 
+\addcontentsline{toc}{section}{CHƯƠNG 3: THIẾT KẾ HỆ THỐNG}
+
+\subsection*{3.1. Kiến trúc tổng thể} % Heading 2 
+\addcontentsline{toc}{subsection}{3.1. Kiến trúc tổng thể}
+
+\justify
+\noindent Hệ thống được thiết kế theo mô hình MVVM (Model – View – ViewModel). Đây là mô hình phổ biến trong lập trình Android hiện đại, đặc biệt phù hợp với Jetpack Compose – công cụ UI được Google khuyến nghị cho các ứng dụng Android thế hệ mới.
+
+\paragraph{Model:} % Paragraph 
+\noindent Chứa các lớp và thành phần xử lý dữ liệu, bao gồm:
+\begin{itemize}[label=·]
+    \item Các lớp dữ liệu (Data Class) như User, Game, FriendRequest, MatchHistory,...
+    \item Các repository để truy xuất dữ liệu từ Firebase Firestore và Firebase Authentication
+    \item Các thuật toán logic như AI Minimax
+\end{itemize}
+
+\paragraph{ViewModel:} % Paragraph 
+\noindent Trung gian giữa View và Model. Nó chứa logic xử lý, điều hướng dữ liệu từ Model đến View. ViewModel cũng quản lý trạng thái UI thông qua State, LiveData, hoặc StateFlow.
+
+\paragraph{View (UI):} % Paragraph 
+\noindent Giao diện người dùng được xây dựng bằng Jetpack Compose, phản hồi dữ liệu trạng thái từ ViewModel để hiển thị thông tin phù hợp.
+
+\subsection*{3.2. Thiết kế giao diện người dùng (UI)} % Heading 2 
+\addcontentsline{toc}{subsection}{3.2. Thiết kế giao diện người dùng (UI)}
+
+\subsubsection*{3.2.1. Màn hình chính} % Heading 3
+\addcontentsline{toc}{subsubsection}{3.2.1. Màn hình chính}
+
+\noindent Gồm các lựa chọn:
+\begin{itemize}[label=·]
+    \item Chơi với bạn
+    \item Chơi với AI
+    \item Chơi online
+    \item Xem lịch sử
+    \item Hồ sơ cá nhân
+    \item Xếp hạng
+\end{itemize}
+
+\subsubsection*{3.2.2. Màn hình đăng nhập / đăng ký} % Heading 3
+\addcontentsline{toc}{subsubsection}{3.2.2. Màn hình đăng nhập / đăng ký}
+
+\noindent Người dùng có thể:
+\begin{itemize}[label=·]
+    \item Nhập email và mật khẩu để đăng nhập
+    \item Đăng nhập bằng Google thông qua Firebase Auth
+    \item Chọn "Quên mật khẩu" để khôi phục mật khẩu qua email
+\end{itemize}
+
+\subsubsection*{3.2.3. Màn hình chơi cờ} % Heading 3 
+\addcontentsline{toc}{subsubsection}{3.2.3. Màn hình chơi cờ}
+
+\noindent \begin{itemize}[label=·]
+    \item Giao diện bàn cờ 8x8, với các quân cờ có thể tương tác trực tiếp
+    \item Thể hiện nước đi hợp lệ khi chọn một quân cờ
+    \item Có thể phân biệt lượt chơi của người dùng và đối thủ (có màu hoặc nhấn sáng)
+    \item Ghi nhận và hiển thị lịch sử các nước đi
+\end{itemize}
+
+\subsubsection*{3.2.4. Màn hình bạn bè và tìm kiếm} % Heading 3 
+\addcontentsline{toc}{subsubsection}{3.2.4. Màn hình bạn bè và tìm kiếm}
+
+\noindent \begin{itemize}[label=·]
+    \item Danh sách bạn bè kèm ảnh đại diện và tên
+    \item Tìm kiếm bạn bè theo tên người dùng
+    \item Gửi lời mời kết bạn và phản hồi lời mời
+\end{itemize}
+
+\subsubsection*{3.2.5. Màn hình hồ sơ cá nhân} % Heading 3 
+\addcontentsline{toc}{subsubsection}{3.2.5. Màn hình hồ sơ cá nhân}
+
+
+\noindent Hiển thị thông tin: ảnh đại diện, tên, email, số trận thắng/thua, hạng hiện tại
+\noindent Cho phép người dùng cập nhật thông tin cá nhân
+
+\subsubsection*{3.2.6. Màn hình lịch sử và chi tiết trận đấu} % Heading 3 
+\addcontentsline{toc}{subsubsection}{3.2.6. Màn hình lịch sử và chi tiết trận đấu}
+
+
+\noindent \begin{itemize}[label=·]
+    \item Danh sách các trận đã chơi (ngày, đối thủ, kết quả)
+    \item Xem lại toàn bộ ván đấu dưới dạng bảng nước đi hoặc mô phỏng lại bàn cờ
+\end{itemize}
+
+\subsection*{3.3. Thiết kế cơ sở dữ liệu} % Heading 2 
+\addcontentsline{toc}{subsection}{3.3. Thiết kế cơ sở dữ liệu}
+
+\justify
+\noindent Hệ thống sử dụng Firebase Firestore – một cơ sở dữ liệu NoSQL dạng tài liệu, linh hoạt, thời gian thực.
+
+\paragraph{Các collection chính:} % Paragraph không đánh số
+
+\begin{itemize}[label=·]
+    \item \textbf{users:} lưu thông tin người dùng
+          \begin{center}
+              \includegraphics[width=0.9\textwidth]{img/user.png}
+          \end{center}
+    \item \textbf{friends:} quản lý mối quan hệ bạn bè
+          \begin{center}
+              \includegraphics[width=0.9\textwidth]{img/friend.png}
+          \end{center}
+     \item \textbf{friends:} quản lý yêu cầu kết bạn
+          \begin{center}
+              \includegraphics[width=0.9\textwidth]{img/friend_request.png}
+          \end{center}
+    \item \textbf{matches:} lưu thông tin các trận đấu
+          \begin{center}
+              \includegraphics[width=0.9\textwidth]{img/match.png}
+          \end{center}
+    \item \textbf{rankings:} danh sách xếp hạng người chơi, có thể cập nhật định kỳ hoặc theo sự kiện
+\end{itemize}
+
+\subsection*{3.4. Thiết kế thuật toán chơi với AI} % Heading 2 
+\addcontentsline{toc}{subsection}{3.4. Thiết kế thuật toán chơi với AI}
+
+\justify
+\noindent Ứng dụng sử dụng thuật toán Minimax kết hợp với Alpha-Beta pruning để xây dựng AI chơi cờ:
+
+\noindent \textbf{\large \textit{Minimax:}} Thuật toán tìm kiếm theo chiều sâu, mô phỏng các nước đi và phản ứng của đối thủ, từ đó chọn nước đi tối ưu.\\
+
+\noindent \textbf{\large \textit{Alpha-Beta pruning:}} Cải tiến của Minimax, giúp cắt bớt các nhánh không cần thiết, tăng tốc độ xử lý.\\
+\noindent Độ sâu (depth) của thuật toán được điều chỉnh theo độ khó của người chơi lựa chọn.
+
+\subsection*{3.5. Luồng hoạt động chính} % Heading 2 
+\addcontentsline{toc}{subsection}{3.5. Luồng hoạt động chính}
+
+\subsubsection*{3.5.1. Luồng chơi online} % Heading 3
+\addcontentsline{toc}{subsubsection}{3.5.1. Luồng chơi online}
+
+
+\begin{itemize}[label=·]
+    \item Người dùng bấm "Chơi Online"
+    \item Hệ thống kiểm tra phòng đang chờ
+    \item Nếu có, ghép người chơi vào phòng đó; nếu không, tạo phòng mới
+    \item Hai người chơi thi đấu theo lượt
+    \item Khi ván đấu kết thúc, hệ thống cập nhật kết quả, lịch sử trận đấu, và điểm xếp hạng
+\end{itemize}
+
+\subsubsection*{3.5.2. Luồng thêm bạn} % Heading 3 
+\addcontentsline{toc}{subsubsection}{3.5.2. Luồng thêm bạn}
+
+
+\begin{itemize}[label=·]
+    \item Người dùng tìm kiếm tên người chơi
+    \item Gửi lời mời kết bạn
+    \item Người nhận xác nhận lời mời
+    \item Hệ thống cập nhật mối quan hệ trong collection friends
+\end{itemize}
+
+\subsection*{3.6. Sơ đồ chức năng (Use Case Diagram)} % Heading 2 
+\addcontentsline{toc}{subsection}{3.6. Sơ đồ chức năng (Use Case Diagram)}
+
+\section*{\centering \textbf{CHƯƠNG 4: KẾT QUẢ VÀ HƯỚNG PHÁT TRIỂN}} % Heading 1 
+\addcontentsline{toc}{section}{CHƯƠNG 4: KẾT QUẢ VÀ HƯỚNG PHÁT TRIỂN}
+
+\subsection*{4.1. Kết quả đạt được} % Heading 2 
+\addcontentsline{toc}{subsection}{4.1. Kết quả đạt được}
+
+\justify
+\noindent Sau một quá trình tìm tòi, nghiên cứu, thiết kế và triển khai, ứng dụng ChessMate đã được xây dựng thành công và hoàn thiện các chức năng chính như sau:
+
+\paragraph{\textbf{Chức năng xác thực người dùng:}} % Paragraph
+\begin{itemize}[label=·]
+    \item Đăng nhập bằng tài khoản email và mật khẩu thông qua Firebase Authentication.
+    \item Đăng nhập nhanh bằng tài khoản Google (Google Sign-In).
+    \item Đăng ký tài khoản mới và xác minh đầu vào cơ bản.
+    \item Chức năng “Quên mật khẩu” giúp người dùng khôi phục mật khẩu thông qua email.
+\end{itemize}
+
+\paragraph{\textbf{Chức năng chơi cờ:}} % Paragraph 
+\begin{itemize}[label=·]
+    \item Chơi với bạn bè: Hai người cùng chơi trực tiếp trên một thiết bị.
+    \item Chơi với AI: Ứng dụng tích hợp thuật toán Minimax cùng Alpha-Beta Pruning để xây dựng AI có khả năng chơi cờ với nhiều mức độ khó khác nhau.
+    \item Chơi online: Người dùng có thể ghép trận ngẫu nhiên và chơi cờ trực tuyến với người chơi khác.
+\end{itemize}
+
+\paragraph{\textbf{Chức năng mạng xã hội:}} % Paragraph 
+\begin{itemize}[label=·]
+    \item Gửi lời mời kết bạn, chấp nhận, từ chối lời mời.
+    \item Danh sách bạn bè có thể xem thông tin, gửi lời mời chơi.
+    \item Tìm kiếm người chơi theo tên.
+\end{itemize}
+
+\paragraph{\textbf{Chức năng quản lý người dùng:}} % Paragraph 
+\begin{itemize}[label=·]
+    \item Xem và chỉnh sửa thông tin cá nhân (tên hiển thị, mô tả...).
+    \item Xem thông tin chi tiết của bạn bè và đối thủ đã từng chơi cùng.
+\end{itemize}
+
+\paragraph{\textbf{Lịch sử và thống kê:}} % Paragraph 
+\begin{itemize}[label=·]
+    \item Lưu trữ lịch sử các ván đấu, bao gồm thời gian, kết quả, và các nước đi.
+    \item Hiển thị lại bàn cờ và diễn biến trận đấu.
+\end{itemize}
+
+\paragraph{\textbf{Mô hình kiến trúc MVVM:}} % Paragraph 
+\noindent Ứng dụng được xây dựng theo mô hình MVVM (Model - View - ViewModel) giúp phân tách rõ ràng giữa giao diện, logic xử lý và dữ liệu, tăng khả năng bảo trì, mở rộng và tái sử dụng code.
+
+\paragraph{\textbf{Công nghệ sử dụng:}} % Paragraph 
+\begin{itemize}[label=·]
+    \item \textbf{Ngôn ngữ lập trình:} Kotlin
+    \item \textbf{Giao diện:} Jetpack Compose – giúp viết UI bằng code, dễ tùy biến và hiện đại.
+    \item \textbf{Cơ sở dữ liệu:} Firestore – lưu trữ thông tin người dùng, bạn bè, lịch sử trận đấu.
+    \item \textbf{Xác thực:} Firebase Authentication
+\end{itemize}
+
+\subsection*{4.2. Hạn chế} % Heading 2 
+\addcontentsline{toc}{subsection}{4.2. Hạn chế}
+
+\justify
+\noindent Dù ứng dụng đã đạt được nhiều kết quả tích cực, vẫn còn một số điểm hạn chế cần cải thiện:
+\begin{itemize}[label=·]
+    \item Chưa có chức năng chat hoặc nhắn tin giữa người chơi.
+    \item Hệ thống đánh giá AI mới chỉ ở mức cơ bản, cần tối ưu thêm thuật toán để có các cấp độ khó hơn.
+    \item Tính năng chơi online đôi khi bị chậm do phụ thuộc vào tốc độ kết nối mạng và quá trình đồng bộ Firestore.
+    \item Giao diện chưa tối ưu hoàn toàn cho tất cả kích thước màn hình.
+    \item Chưa có tính năng sửa ảnh avatar.
+    \item Chưa có tính năng xếp hạng người chơi dựa trên số trận thắng/thua và thời gian hoạt động.
+\end{itemize}
+
+\subsection*{4.3. Hướng phát triển} % Heading 2 
+\addcontentsline{toc}{subsection}{4.3. Hướng phát triển}
+
+\justify
+\noindent Trong thời gian tới, ứng dụng ChessMate có thể được nâng cấp với các tính năng mới và tối ưu như sau:
+
+\paragraph{\textbf{Cải tiến hiệu năng:}} % Paragraph 
+\begin{itemize}[label=·]
+    \item Tối ưu tốc độ load dữ liệu từ Firestore.
+    \item Sử dụng Cloud Functions để xử lý một số logic phía server.
+    \item Sử dụng Firebase Storage để lưu trữ ảnh .
+\end{itemize}
+
+\paragraph{\textbf{Tính năng mở rộng:}} % Paragraph 
+\begin{itemize}[label=·]
+    \item Thêm chức năng chat trực tiếp khi chơi online.
+    \item Hệ thống thành tích và huy hiệu cho người chơi.
+    \item Thêm nhiều cấp độ AI và nâng cao trí tuệ nhân tạo bằng các kỹ thuật Machine Learning.
+    \item Hỗ trợ đa ngôn ngữ để tiếp cận nhiều người dùng hơn.
+\end{itemize}
+
+\paragraph{\textbf{Tích hợp dịch vụ bên ngoài:}} % Paragraph
+\begin{itemize}[label=·]
+    \item Tích hợp Firebase Cloud Messaging để gửi thông báo khi có lời mời kết bạn, thách đấu...
+    \item Đồng bộ tài khoản và xếp hạng qua Google Play Games.
+\end{itemize}
+
+\subsection*{4.4. Kết quả học tập đạt được} % Heading 2
+\addcontentsline{toc}{subsection}{4.4. Kết quả học tập đạt được}
+
+\justify
+\noindent Thông qua quá trình thực hiện đồ án, nhóm đã học được và củng cố nhiều kiến thức, bao gồm:
+\begin{itemize}[label=·]
+    \item Thành thạo hơn trong sử dụng Kotlin và Jetpack Compose để phát triển ứng dụng Android hiện đại.
+    \item Hiểu rõ về mô hình kiến trúc MVVM trong thực tế.
+    \item Biết cách tích hợp Firebase (Authentication, Firestore, Storage) vào ứng dụng Android.
+    \item Có thêm kinh nghiệm về thuật toán AI và xử lý logic cờ vua.
+    \item Rèn luyện kỹ năng làm việc nhóm, chia nhỏ task và tổ chức tiến độ hợp lý.
+\end{itemize}
+
+\newpage
+
+\section*{\centering \textbf{KẾT LUẬN}} % Heading 1 căn giữa, in đậm
+\addcontentsline{toc}{section}{KẾT LUẬN}
+
+\justify
+\noindent Sau một khoảng thời gian tìm hiểu, nghiên cứu và thực hiện, nhóm đã hoàn thành ứng dụng ChessMate – một ứng dụng chơi cờ vua hiện đại, tiện lợi trên nền tảng Android. Ứng dụng được xây dựng bằng ngôn ngữ Kotlin, sử dụng Jetpack Compose cho giao diện và Firebase làm nền tảng backend, đáp ứng đầy đủ các chức năng như: chơi với bạn, chơi với AI, ghép trận online, quản lý tài khoản, bạn bè, và lưu lịch sử trận đấu.
+
+\noindent Thông qua đồ án này, nhóm không chỉ củng cố kiến thức về lập trình Android và mô hình kiến trúc MVVM mà còn học được cách giải quyết vấn đề thực tế, thiết kế logic hợp lý và phối hợp làm việc nhóm hiệu quả. Đặc biệt, việc xây dựng AI để chơi cờ là một thử thách thú vị và giúp nhóm hiểu sâu hơn về thuật toán Minimax và cách tối ưu nó.
+
+\noindent Tuy còn một số hạn chế cần cải thiện, nhưng kết quả hiện tại là bước đệm vững chắc để nhóm có thể tiếp tục nâng cấp và phát triển ứng dụng trong tương lai. Đây cũng là một trải nghiệm học tập rất đáng nhớ và hữu ích trong hành trình trở thành lập trình viên chuyên nghiệp.
+
+\noindent Nhóm xin chân thành cảm ơn thầy Trương Quang Tuấn đã tận tình hướng dẫn, góp ý trong suốt quá trình thực hiện đồ án này.
+
+\newpage % Bắt đầu trang mới cho Tài liệu tham khảo
+
+\section*{\centering \textbf{TÀI LIỆU THAM KHẢO}} % Heading 1, căn giữa, in đậm
+\addcontentsline{toc}{section}{TÀI LIỆU THAM KHẢO}
+
+
+\begin{thebibliography}{99} % Sử dụng môi trường thebibliography với nhãn số tối đa là 99
+
+    \bibitem{android_kotlin}
+    Android Developers. \textit{Kotlin on Android}.
+    \href{https://developer.android.com/kotlin}{\nolinkurl{https://developer.android.com/kotlin}}
+    (Truy cập ngày 15 tháng 3 năm 2025).
+
+    \bibitem{jetpack_compose}
+    Android Developers. \textit{Jetpack Compose}.
+    \href{https://developer.android.com/jetpack/compose}{\nolinkurl{https://developer.android.com/jetpack/compose}}
+    (Truy cập ngày 18 tháng 3 năm 2025).
+
+    \bibitem{firebase_docs}
+    Firebase Documentation.
+    \href{https://firebase.google.com/docs}{\nolinkurl{https://firebase.google.com/docs}}
+    (Truy cập ngày 25 tháng 3 năm 2025).
+
+    \bibitem{mvvm_android}
+    Google Developers. \textit{Guide to app architecture}.
+    \href{https://developer.android.com/topic/architecture}{\nolinkurl{https://developer.android.com/topic/architecture}}
+    (Truy cập ngày 01 tháng 4 năm 2025).
+
+    \bibitem{minimax_wiki}
+    Wikipedia. \textit{Minimax}.
+    \href{https://en.wikipedia.org/wiki/Minimax}{\nolinkurl{https://en.wikipedia.org/wiki/Minimax}}
+    (Truy cập ngày 05 tháng 4 năm 2025).
+
+    \bibitem{alphabeta_hcm}
+    websitehcm.com. \textit{Thuật toán Alpha-Beta Pruning}.
+    \href{https://websitehcm.com/thuat-toan-alpha-beta-pruning/}{\nolinkurl{https://websitehcm.com/thuat-toan-alpha-beta-pruning/}}
+    (Truy cập ngày 07 tháng 4 năm 2025).
+
+    \bibitem{chess_standard}
+    FIDE. \textit{Laws of Chess}.
+    \href{https://handbook.fide.com/chapter/E012023}{\nolinkurl{https://handbook.fide.com/chapter/E012023}}
+    (Truy cập ngày 10 tháng 4 năm 2025).
+
+
+\end{thebibliography}
 
 \end{document}

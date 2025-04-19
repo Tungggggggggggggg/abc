@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +23,7 @@ import com.example.chessmate.ui.components.ButtonItem
 import com.example.chessmate.ui.components.Chessboard
 import com.example.chessmate.ui.components.Logo
 import com.example.chessmate.viewmodel.ChessViewModel
+import com.example.chessmate.viewmodel.FindFriendsViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
@@ -44,7 +46,7 @@ fun MainHeader(
         ) {
             Box {
                 Image(
-                    painter = painterResource(id = R.drawable.message),
+                    painter = painterResource(id = R.drawable.friend),
                     contentDescription = "Tin nhắn",
                     modifier = Modifier.size(32.dp)
                 )
@@ -74,7 +76,10 @@ fun MainHeader(
 }
 
 @Composable
-fun MainButtonRow(navController: NavController) {
+fun MainButtonRow(
+    navController: NavController,
+    hasPendingRequests: Boolean
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -91,11 +96,23 @@ fun MainButtonRow(navController: NavController) {
                 onClick = { navController.navigate("loading") }
             )
             Spacer(modifier = Modifier.width(32.dp))
-            ButtonItem(
-                text = "Tìm bạn",
-                colorId = R.color.color_c89f9c,
-                onClick = { navController.navigate("find_friends") }
-            )
+            Box {
+                ButtonItem(
+                    text = "Tìm bạn",
+                    colorId = R.color.color_c89f9c,
+                    onClick = { navController.navigate("find_friends") }
+                )
+                if (hasPendingRequests) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .offset(x = (-16).dp, y = 8.dp)
+                            .align(Alignment.TopEnd)
+                            .clip(CircleShape)
+                            .background(Color.Red)
+                    )
+                }
+            }
         }
         Row(
             horizontalArrangement = Arrangement.Center,
@@ -120,9 +137,11 @@ fun MainButtonRow(navController: NavController) {
 @Composable
 fun MainScreen(
     navController: NavController,
-    viewModel: ChessViewModel = viewModel()
+    viewModel: ChessViewModel = viewModel(),
+    friendViewModel: FindFriendsViewModel = viewModel()
 ) {
     val auth = FirebaseAuth.getInstance()
+    val receivedRequests = friendViewModel.receivedRequests.collectAsState()
 
     LaunchedEffect(Unit) {
         if (auth.currentUser == null) {
@@ -131,6 +150,7 @@ fun MainScreen(
                 launchSingleTop = true
             }
         }
+        friendViewModel.loadReceivedRequests()
     }
 
     Scaffold(
@@ -146,10 +166,16 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            MainHeader(navController = navController)
+            MainHeader(
+                navController = navController,
+                onMessageClick = { navController.navigate("chat") }
+            )
             Logo()
             Spacer(modifier = Modifier.height(20.dp))
-            MainButtonRow(navController)
+            MainButtonRow(
+                navController = navController,
+                hasPendingRequests = receivedRequests.value.isNotEmpty()
+            )
             Spacer(modifier = Modifier.height(20.dp))
             Chessboard(
                 board = viewModel.board.value,

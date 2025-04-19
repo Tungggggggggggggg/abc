@@ -13,3 +13,9 @@ data class ChessPiece(
     val color: PieceColor,
     val position: Position
 )
+
+data class Move(
+    val from: Position,
+    val position: Position,
+    val captures: Boolean
+)

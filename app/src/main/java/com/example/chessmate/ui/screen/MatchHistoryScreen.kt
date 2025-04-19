@@ -5,27 +5,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.chessmate.R
 import com.example.chessmate.ui.theme.ChessmateTheme
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.platform.LocalContext
+import com.example.chessmate.viewmodel.MatchHistoryViewModel
+import com.example.chessmate.model.Match
 import android.widget.Toast
+import java.text.SimpleDateFormat
+import java.util.Locale
 
-
-// Thanh tiêu đề với nút quay lại và tiêu đề "Lịch sử trận đấu"
 @Composable
 fun MatchHistoryHeader(
     onBackClick: () -> Unit,
@@ -62,171 +64,179 @@ fun MatchHistoryHeader(
     }
 }
 
-// Dữ liệu mẫu cho một trận đấu
-data class Match(
-    val result: String,
-    val date: String,
-    val moves: Int,
-    val opponent: String
-)
-
-// Hàng hiển thị thông tin một trận đấu
 @Composable
-fun MatchHistoryRow(match: Match) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Biểu tượng người chơi (hình tròn)
-            Image(
-                painter = painterResource(id = R.drawable.profile),
-                contentDescription = "Người chơi",
-                modifier = Modifier
-                    .size(48.dp)
-                    .padding(end = 12.dp)
-            )
-
-            // Cột thông tin chính (tên đối thủ, số bước, ngày giờ)
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                // Dòng 1: Tên đối thủ
-                Text(
-                    text = match.opponent,
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Dòng 2: Số bước và ngày giờ
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Số bước đi
-                    Text(
-                        text = "Số bước: ${match.moves}",
-                        fontSize = 16.sp,
-                        color = Color.Black
-                    )
-
-                    // Ngày giờ
-                    Text(
-                        text = match.date,
-                        fontSize = 16.sp,
-                        color = Color.Black
-                    )
-                }
-            }
-
-            // Kết quả trận đấu (bên phải)
-            Text(
-                text = match.result,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = when (match.result) {
-                    "Thắng" -> Color(0xFF29BF12)
-                    "Thua" -> Color(0xFFF21B3F)
-                    else -> Color.Black
-                },
-                modifier = Modifier.padding(start = 12.dp)
-            )
-        }
-
-        // Đường gạch ngang kéo dài toàn bộ chiều rộng màn hình
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(Color.Black)
-        )
-    }
-}
-
-// Nội dung chính của màn hình lịch sử trận đấu
-@Composable
-fun MatchHistoryContent(
-    matches: List<Match>,
+fun MatchHistoryRow(
+    match: Match,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
+    // Chuyển đổi định dạng ngày giờ từ "yyyy-MM-dd HH:mm" sang "HH:mm dd/MM/yyyy"
+    val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    val outputFormat = SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.getDefault())
+    val formattedDate = try {
+        val date = inputFormat.parse(match.date)
+        outputFormat.format(date)
+    } catch (e: Exception) {
+        match.date
+    }
+
+    Row(
         modifier = modifier
-            .fillMaxSize()
-            .background(colorResource(id = R.color.color_c97c5d))
+            .fillMaxWidth()
+            .height(64.dp)
+            .background(
+                when (match.result) {
+                    "Thắng" -> colorResource(id = R.color.win_background)
+                    "Thua" -> colorResource(id = R.color.lose_background)
+                    else -> colorResource(id = R.color.draw_background)
+                }
+            ),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        items(matches) { match ->
-            MatchHistoryRow(match = match)
-            Spacer(modifier = Modifier.height(8.dp))
+        // Ký hiệu W, L, D
+        Box(
+            modifier = Modifier
+                .width(40.dp)
+                .fillMaxHeight() // Kéo dài hết chiều cao của hàng
+                .background(
+                    when (match.result) {
+                        "Thắng" -> colorResource(id = R.color.win_indicator)
+                        "Thua" -> colorResource(id = R.color.lose_indicator)
+                        else -> colorResource(id = R.color.draw_indicator)
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = when (match.result) {
+                    "Thắng" -> "W"
+                    "Thua" -> "L"
+                    else -> "D"
+                },
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        // Ảnh đại diện
+        Image(
+            painter = painterResource(id = R.drawable.profile),
+            contentDescription = "Ảnh đại diện đối thủ",
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.Gray)
+        )
+
+        // Thông tin trận đấu
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Tên đối thủ
+            Text(
+                text = match.opponent,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            // Số bước và giờ ngày
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "${match.moves} bước",
+                    fontSize = 14.sp,
+                    color = Color.Black
+                )
+                Text(
+                    text = formattedDate,
+                    fontSize = 14.sp,
+                    color = Color.Black
+                )
+            }
         }
     }
 }
 
-// Màn hình chính để hiển thị lịch sử trận đấu
+@Composable
+fun MatchHistoryContent(
+    modifier: Modifier = Modifier,
+    matches: List<Match>,
+    isLoading: Boolean,
+    error: String?
+) {
+    val context = LocalContext.current
+
+    LaunchedEffect(error) {
+        error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colorResource(id = R.color.color_c97c5d))
+    ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (matches.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Không có lịch sử trận đấu.",
+                    fontSize = 16.sp,
+                    color = Color.Black
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(matches) { match ->
+                    MatchHistoryRow(match = match)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun MatchHistoryScreen(
     navController: NavController? = null,
-    onBackClick: () -> Unit = { navController?.popBackStack() }
+    userId: String,
+    viewModel: MatchHistoryViewModel = viewModel()
 ) {
-    val auth = FirebaseAuth.getInstance()
-    val firestore = FirebaseFirestore.getInstance()
-    var matches by remember { mutableStateOf<List<Match>>(emptyList()) }
-    val context = LocalContext.current
-    var isLoading by remember { mutableStateOf(true) }
-
-    // Lấy lịch sử trận đấu từ Firestore
-    LaunchedEffect(Unit) {
-        val userId = auth.currentUser?.uid
-        if (userId != null) {
-            firestore.collection("users")
-                .document(userId)
-                .collection("match_history")
-                .orderBy("date") // Sắp xếp theo ngày (có thể tùy chỉnh)
-                .get()
-                .addOnSuccessListener { querySnapshot ->
-                    val matchList = mutableListOf<Match>()
-                    for (document in querySnapshot) {
-                        val result = document.getString("result") ?: ""
-                        val date = document.getString("date") ?: ""
-                        val moves = document.getLong("moves")?.toInt() ?: 0
-                        val opponent = document.getString("opponent") ?: ""
-                        matchList.add(Match(result, date, moves, opponent))
-                    }
-                    matches = matchList
-                    isLoading = false
-                }
-                .addOnFailureListener { e ->
-                    Toast.makeText(context, "Lỗi khi tải lịch sử: ${e.message}", Toast.LENGTH_SHORT).show()
-                    isLoading = false
-                }
-            } else {
-                Toast.makeText(context, "Người dùng chưa đăng nhập.", Toast.LENGTH_SHORT).show()
-                isLoading = false
-            }
-        }
+    LaunchedEffect(userId) {
+        viewModel.loadMatchHistory(userId)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        MatchHistoryHeader(onBackClick = onBackClick)
+        MatchHistoryHeader(
+            onBackClick = { navController?.popBackStack() }
+        )
         MatchHistoryContent(
-            matches = matches,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(1f),
+            matches = viewModel.matches.value,
+            isLoading = viewModel.isLoading.value,
+            error = viewModel.error.value
         )
-    }
-}
-
-// Xem trước giao diện màn hình lịch sử trận đấu
-@Preview(showBackground = true)
-@Composable
-fun MatchHistoryScreenPreview() {
-    ChessmateTheme {
-        MatchHistoryScreen()
     }
 }

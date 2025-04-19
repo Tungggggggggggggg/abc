@@ -16,11 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.chessmate.R
-import com.example.chessmate.model.ChessPiece
-import com.example.chessmate.model.Move
-import com.example.chessmate.model.PieceColor
-import com.example.chessmate.model.PieceType
-import com.example.chessmate.model.Position
+import com.example.chessmate.model.*
 
 @Composable
 fun Chessboard(

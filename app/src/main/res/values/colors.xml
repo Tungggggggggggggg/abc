@@ -13,4 +13,13 @@
     <color name="color_c89f9c">#C89F9C</color>
     <color name="color_c97c5d">#C97C5D</color>
     <color name="color_b36a5e">#B36A5E</color>
+
+    <color name="win_background">#D5F5E3</color>
+    <color name="lose_background">#FADBD8</color>
+    <color name="draw_background">#D7CCC8</color>
+
+    <color name="win_indicator">#2ECC71</color>
+    <color name="lose_indicator">#E74C3C</color>
+    <color name="draw_indicator">#8B4513</color>
+
 </resources>

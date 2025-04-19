@@ -21,7 +21,7 @@ fun Logo(modifier: Modifier = Modifier) {
         Image(
             painter = painterResource(id = R.drawable.logo),
             contentDescription = "Chessmate Logo",
-            modifier = Modifier.size(240.dp)
+            modifier = Modifier.size(200.dp)
         )
     }
 }

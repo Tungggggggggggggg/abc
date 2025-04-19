@@ -208,6 +208,15 @@ fun LoginScreen(navController: NavController? = null) {
     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val currentDate = dateFormat.format(Date())
 
+    // Hàm tạo danh sách các tiền tố từ một chuỗi
+    fun generatePrefixes(text: String): List<String> {
+        val prefixes = mutableListOf<String>()
+        for (i in 1..text.length) {
+            prefixes.add(text.substring(0, i))
+        }
+        return prefixes
+    }
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val credential = oneTapClient.getSignInCredentialFromIntent(result.data)
@@ -228,13 +237,19 @@ fun LoginScreen(navController: NavController? = null) {
                                             popUpTo("login") { inclusive = true }
                                         }
                                     } else {
+                                        val name = user.displayName ?: "Unknown"
+                                        val email = user.email ?: ""
+                                        val nameLowercase = name.lowercase()
+                                        val nameKeywords = generatePrefixes(nameLowercase)
                                         val userData = hashMapOf(
-                                            "name" to (user.displayName ?: "Unknown"),
-                                            "email" to (user.email ?: ""),
+                                            "name" to name,
+                                            "email" to email,
                                             "createdAt" to currentDate,
                                             "description" to "Không có mô tả",
                                             "score" to 0,
-                                            "userId" to userId
+                                            "userId" to userId,
+                                            "nameLowercase" to nameLowercase,
+                                            "nameKeywords" to nameKeywords
                                         )
                                         firestore.collection("users")
                                             .document(userId)
@@ -314,14 +329,19 @@ fun LoginScreen(navController: NavController? = null) {
                                 }
                             } else {
                                 val user = auth.currentUser
+                                val name = user?.displayName ?: "Unknown"
+                                val nameLowercase = name.lowercase()
+                                val nameKeywords = generatePrefixes(nameLowercase)
                                 val userData = hashMapOf(
-                                    "name" to (user?.displayName ?: "Unknown"),
+                                    "name" to name,
                                     "email" to email,
                                     "createdAt" to currentDate,
                                     "description" to "Không có mô tả",
                                     "score" to 0,
                                     "userId" to userId,
-                                    "username" to username
+                                    "username" to username,
+                                    "nameLowercase" to nameLowercase,
+                                    "nameKeywords" to nameKeywords
                                 )
                                 firestore.collection("users")
                                     .document(userId)

@@ -1,231 +1,45 @@
 package com.example.chessmate.ui.screen
 
-import android.os.Bundle
-import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.chessmate.R
 import com.example.chessmate.ui.components.Logo
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import com.example.chessmate.model.User
 import com.example.chessmate.model.FriendRequest
+import com.example.chessmate.model.User
+import com.example.chessmate.viewmodel.FindFriendsViewModel
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.graphics.graphicsLayer
 
-
-// ViewModel for FindFriendsScreen
-class FindFriendsViewModel : ViewModel() {
-    private val firestore = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
-
-    private val _searchResults = MutableStateFlow<List<User>>(emptyList())
-    val searchResults: StateFlow<List<User>> = _searchResults
-
-    private val _receivedRequests = MutableStateFlow<List<FriendRequest>>(emptyList())
-    val receivedRequests: StateFlow<List<FriendRequest>> = _receivedRequests
-
-    private val _sentRequests = MutableStateFlow<List<String>>(emptyList())
-    val sentRequests: StateFlow<List<String>> = _sentRequests
-
-    private val _friends = MutableStateFlow<List<User>>(emptyList())
-    val friends: StateFlow<List<User>> = _friends
-
-
-    fun searchUsers(query: String) {
-        firestore.collection("users")
-            .whereGreaterThanOrEqualTo("name", query)
-            .whereLessThanOrEqualTo("name", query + "\uf8ff")
-            .get()
-            .addOnSuccessListener { result ->
-                val users = result.documents.mapNotNull { doc ->
-                    val name = doc.getString("name") ?: return@mapNotNull null
-                    val email = doc.getString("email") ?: return@mapNotNull null
-                    val userId = doc.getString("userId") ?: doc.id
-                    val currentUid = auth.currentUser?.uid
-                    if (userId == currentUid) return@mapNotNull null
-                    User(userId, name, email)
-                }
-                _searchResults.value = users
-            }
-    }
-
-
-    fun sendFriendRequest(toUserId: String) {
-        val fromUserId = auth.currentUser?.uid ?: return
-        val fromUserName = auth.currentUser?.displayName ?: "Unknown" // Lấy tên người gửi
-
-        // Lưu lời mời kết bạn với tên người gửi
-        val request = hashMapOf(
-            "fromUserId" to fromUserId,
-            "fromName" to fromUserName,  // Lưu tên người gửi vào trường này
-            "toUserId" to toUserId,
-            "timestamp" to Timestamp.now(),
-            "status" to "pending"
-        )
-
-        firestore.collection("friend_requests")
-            .add(request)
-            .addOnSuccessListener {
-                // Cập nhật danh sách lời mời đã gửi
-                _sentRequests.value = _sentRequests.value + toUserId
-            }
-    }
-
-
-    fun acceptFriendRequest(request: FriendRequest) {
-        firestore.collection("friend_requests")
-            .whereEqualTo("fromUserId", request.fromUserId)
-            .whereEqualTo("toUserId", request.toUserId)
-            .get()
-            .addOnSuccessListener { result ->
-                val requestDoc = result.documents.firstOrNull()
-
-                // Kiểm tra nếu requestDoc không null
-                if (requestDoc != null) {
-                    // Cập nhật trạng thái lời mời thành "accepted"
-                    requestDoc.reference.update("status", "accepted")
-                        .addOnSuccessListener {
-                            // Thêm vào danh sách bạn bè
-                            firestore.collection("friends")
-                                .add(
-                                    hashMapOf(
-                                        "user1" to request.fromUserId,
-                                        "user2" to request.toUserId
-                                    )
-                                )
-                                .addOnSuccessListener {
-                                    // Cập nhật danh sách bạn bè ngay lập tức
-                                    _friends.value = _friends.value + User(
-                                        request.fromUserId,
-                                        request.fromName,
-                                        ""
-                                    )
-                                    loadReceivedRequests() // Cập nhật lại các yêu cầu nhận được
-                                    loadSentRequests() // Cập nhật lại các yêu cầu đã gửi
-                                    loadFriends()
-                                }
-                            // Xóa lời mời kết bạn sau khi chấp nhận
-                            requestDoc.reference.delete()
-                                .addOnSuccessListener {
-                                    // Cập nhật lại danh sách các yêu cầu đã nhận
-                                    loadReceivedRequests()
-                                }
-                        }
-                }
-            }
-    }
-
-
-    fun declineFriendRequest(request: FriendRequest) {
-        firestore.collection("friend_requests")
-            .whereEqualTo("fromUserId", request.fromUserId)
-            .whereEqualTo("toUserId", request.toUserId)
-            .get()
-            .addOnSuccessListener { result ->
-                val requestDoc = result.documents.firstOrNull()
-                requestDoc?.reference?.update("status", "declined")
-                // Cập nhật lại các yêu cầu
-                loadReceivedRequests()
-                loadSentRequests()
-            }
-    }
-
-    fun loadFriends() {
-        val currentUserId = auth.currentUser?.uid ?: return
-        firestore.collection("friends")
-            .whereIn("user1", listOf(currentUserId))
-            .get()
-            .addOnSuccessListener { result1 ->
-                firestore.collection("friends")
-                    .whereIn("user2", listOf(currentUserId))
-                    .get()
-                    .addOnSuccessListener { result2 ->
-                        val allDocs = result1.documents + result2.documents
-                        val fetchedFriends = mutableSetOf<User>()
-                        allDocs.forEach { doc ->
-                            val user1 = doc.getString("user1")
-                            val user2 = doc.getString("user2")
-                            val friendId = if (user1 == currentUserId) user2 else user1
-                            if (!friendId.isNullOrBlank()) {
-                                firestore.collection("users").document(friendId).get()
-                                    .addOnSuccessListener { userDoc ->
-                                        val name = userDoc.getString("name") ?: "Unknown"
-                                        val email = userDoc.getString("email") ?: ""
-                                        fetchedFriends.add(User(friendId, name, email))
-                                        _friends.value = fetchedFriends.toList()
-                                    }
-                            }
-                        }
-                    }
-            }
-    }
-
-
-
-    fun loadReceivedRequests() {
-        val currentUserId = auth.currentUser?.uid ?: return
-        firestore.collection("friend_requests")
-            .whereEqualTo("toUserId", currentUserId)
-            .whereEqualTo("status", "pending")
-            .get()
-            .addOnSuccessListener { result ->
-                val friendRequests = result.documents.mapNotNull { doc ->
-                    val fromUserId = doc.getString("fromUserId") ?: return@mapNotNull null
-                    val fromName =
-                        doc.getString("fromName") ?: "Unknown" // Đảm bảo lấy tên người gửi
-                    FriendRequest(fromUserId, fromName, currentUserId)
-                }
-                _receivedRequests.value = friendRequests
-            }
-    }
-
-
-    fun loadSentRequests() {
-        val currentUserId = auth.currentUser?.uid ?: return
-        firestore.collection("friend_requests")
-            .whereEqualTo("fromUserId", currentUserId)
-            .whereEqualTo("status", "pending")
-            .get()
-            .addOnSuccessListener { result ->
-                val sentRequestsList = result.documents.mapNotNull { doc ->
-                    doc.getString("toUserId")
-                }
-                _sentRequests.value = sentRequestsList
-            }
-    }
-}
 @Composable
 fun Header(
     navController: NavController,
@@ -248,7 +62,6 @@ fun Header(
                 contentDescription = "Tin nhắn",
                 modifier = Modifier.size(32.dp)
             )
-
         }
         Text(
             text = "Tìm Bạn",
@@ -316,7 +129,15 @@ fun SearchBar(
             onValueChange = onTextChanged,
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .onKeyEvent { event ->
+                    if (event.key == Key.Enter) {
+                        onSearch()
+                        true
+                    } else {
+                        false
+                    }
+                },
             singleLine = true,
             textStyle = TextStyle(
                 color = Color.Black,
@@ -324,16 +145,18 @@ fun SearchBar(
                 fontWeight = FontWeight.Bold
             ),
             cursorBrush = SolidColor(Color.Black),
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             decorationBox = { innerTextField ->
                 if (text.isEmpty()) {
                     Text(
-                        text = "Nhập tên người chơi ...", // Placeholder text
+                        text = "Nhập tên người chơi ...",
                         color = Color.Gray,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                innerTextField() // This will display the text being entered by the user
+                innerTextField()
             }
         )
         IconButton(onClick = onSearch) {
@@ -356,12 +179,32 @@ fun FindFriendsScreen(
     val sentRequests by viewModel.sentRequests.collectAsState()
     val friends by viewModel.friends.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var currentSearchQuery by remember { mutableStateOf("") }
+    var isSearchEmpty by remember { mutableStateOf(false) }
+    var isSearchResultsExpanded by remember { mutableStateOf(true) }
+    var isFriendRequestsExpanded by remember { mutableStateOf(true) }
+    val context = LocalContext.current
 
-    // Load lại dữ liệu bạn bè khi người dùng đăng nhập lại
     LaunchedEffect(Unit) {
         viewModel.loadReceivedRequests()
         viewModel.loadSentRequests()
-        viewModel.loadFriends()  // Đảm bảo tải lại danh sách bạn bè
+        viewModel.loadFriends()
+    }
+
+    // Sắp xếp searchResults: bạn bè -> đã gửi lời mời -> còn lại
+    val sortedSearchResults = searchResults.sortedWith(compareBy<User> {
+        when {
+            friends.any { friend -> friend.userId == it.userId } -> 0
+            it.userId in sentRequests -> 1
+            else -> 2
+        }
+    })
+
+    // Đồng bộ hóa isSearchEmpty với kết quả tìm kiếm
+    LaunchedEffect(searchResults, currentSearchQuery) {
+        if (searchQuery == currentSearchQuery) {
+            isSearchEmpty = searchQuery.isNotBlank() && searchResults.isEmpty()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -373,9 +216,13 @@ fun FindFriendsScreen(
                 .weight(1f)
                 .background(Color(0xFFC97C5D))
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState())
         ) {
-            BackButton(onBackClick = { navController.popBackStack() })
+            BackButton(onBackClick = {
+                navController.navigate("main_screen") {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                    launchSingleTop = true
+                }
+            })
             Logo(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -386,57 +233,142 @@ fun FindFriendsScreen(
             SearchBar(
                 text = searchQuery,
                 onTextChanged = { searchQuery = it },
-                onSearch = { viewModel.searchUsers(searchQuery) }
+                onSearch = {
+                    currentSearchQuery = searchQuery
+                    viewModel.searchUsers(searchQuery)
+                }
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Kết quả tìm kiếm
-            searchResults.forEach { user ->
-                val isFriend = friends.any { it.userId == user.userId }
-                SearchResultItem(
-                    user = user,
-                    alreadySent = user.userId in sentRequests,
-                    onAddFriend = { viewModel.sendFriendRequest(user.userId) },
-                    isFriend = isFriend
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-
-
-            // Hiển thị lời mời kết bạn đã nhận
-            if (receivedRequests.isNotEmpty()) {
+            if (isSearchEmpty && searchQuery.isNotBlank()) {
                 Text(
-                    text = "Lời mời kết bạn",
+                    text = "Người dùng không tồn tại!",
+                    fontSize = 16.sp,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier.padding(8.dp)
                 )
+            } else if (sortedSearchResults.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isSearchResultsExpanded = !isSearchResultsExpanded },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Kết quả tìm kiếm",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Expand/Collapse",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer { rotationZ = if (isSearchResultsExpanded) 0f else 180f }
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
-
-                receivedRequests.forEach { request ->
-                    FriendRequestItem(request = request,
-                        onAccept = { viewModel.acceptFriendRequest(request) },
-                        onDecline = { viewModel.declineFriendRequest(request) })
-                    Spacer(modifier = Modifier.height(8.dp))
+                if (isSearchResultsExpanded) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = (5 * 48).dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(sortedSearchResults) { user ->
+                            val isFriend = friends.any { it.userId == user.userId }
+                            SearchResultItem(
+                                user = user,
+                                alreadySent = user.userId in sentRequests,
+                                onAddFriend = {
+                                    viewModel.sendFriendRequest(user.userId)
+                                    Toast.makeText(context, "Đã gửi lời mời kết bạn!", Toast.LENGTH_SHORT).show()
+                                },
+                                onCancelFriendRequest = {
+                                    viewModel.cancelFriendRequest(user.userId)
+                                    Toast.makeText(context, "Đã hủy lời mời kết bạn!", Toast.LENGTH_SHORT).show()
+                                },
+                                isFriend = isFriend,
+                                onProfileClick = {
+                                    navController.navigate("competitor_profile/${user.userId}")
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
+            if (receivedRequests.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isFriendRequestsExpanded = !isFriendRequestsExpanded },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Lời mời kết bạn",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Expand/Collapse",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer { rotationZ = if (isFriendRequestsExpanded) 0f else 180f }
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                if (isFriendRequestsExpanded) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = (5 * 48).dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(receivedRequests) { request ->
+                            FriendRequestItem(
+                                request = request,
+                                onAccept = {
+                                    viewModel.acceptFriendRequest(request)
+                                    Toast.makeText(context, "Đã chấp nhận lời mời!", Toast.LENGTH_SHORT).show()
+                                },
+                                onDecline = {
+                                    viewModel.declineFriendRequest(request)
+                                    Toast.makeText(context, "Đã từ chối lời mời!", Toast.LENGTH_SHORT).show()
+                                },
+                                onProfileClick = {
+                                    navController.navigate("competitor_profile/${request.fromUserId}")
+                                }
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
 @Composable
 fun SearchResultItem(
     user: User,
     alreadySent: Boolean,
     onAddFriend: () -> Unit,
-    isFriend: Boolean
+    onCancelFriendRequest: () -> Unit,
+    isFriend: Boolean,
+    onProfileClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colorResource(id = R.color.color_c89f9c)
-            ,shape = RoundedCornerShape(15.dp))
+            .background(colorResource(id = R.color.color_c89f9c), shape = RoundedCornerShape(15.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -444,136 +376,98 @@ fun SearchResultItem(
             text = user.name,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onProfileClick() }
         )
-        val backgroundColor = when {
-            alreadySent -> Color.Red // Xám nâu
-            isFriend -> Color((0xFF388E3C)) // Xám đỏ
-            else -> Color.Blue // Mặc định (có thể đổi)
-        }
-
-        Button(
-            onClick = onAddFriend,
-            enabled = !alreadySent && !isFriend,
-            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                containerColor = backgroundColor,
-                contentColor = Color.White,
-                disabledContainerColor = backgroundColor, // Giữ màu khi disabled
-                disabledContentColor = Color.White        // Giữ màu chữ khi disabled
-            ),
-            modifier = Modifier.height(36.dp)
-        ) {
-            Text(text = when {
-                alreadySent -> "Đã gửi lời mời"
-                isFriend -> "Bạn bè"
-                else -> "Gửi lời mời"
-            })
-        }
-
-    }
-}
-
-
-
-@Composable
-fun FriendItem(
-    friend: User,
-    onRemoveFriend: (User) -> Unit // Thêm tham số onRemoveFriend với đối số là User
-) {
-    var showConfirmationDialog by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = friend.name,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
-
-        IconButton(
-            onClick = { showConfirmationDialog = true },
-            modifier = Modifier.size(36.dp)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.delete),
-                contentDescription = "Xóa bạn bè",
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-
-    if (showConfirmationDialog) {
-        AlertDialog(
-            onDismissRequest = { showConfirmationDialog = false },
-            title = {
-                Text(
-                    text = "Bạn có chắc chắn muốn xóa '${friend.name}' khỏi bạn bè không?",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onRemoveFriend(friend) // Gọi hàm xóa bạn bè và truyền friend vào
-                        showConfirmationDialog = false
-                    }
-                ) {
-                    Text("Chắc chắn", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showConfirmationDialog = false }
-                ) {
-                    Text("Không")
-                }
+        if (!alreadySent && !isFriend) {
+            Button(
+                onClick = onAddFriend,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorResource(id = R.color.color_eed7c5),
+                    contentColor = Color.Black
+                ),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Text(text = "Gửi lời mời")
             }
-        )
+        } else if (isFriend) {
+            Button(
+                onClick = {},
+                enabled = false,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF388E3C),
+                    contentColor = Color.Black,
+                    disabledContainerColor = Color(0xFF388E3C),
+                    disabledContentColor = Color.Black
+                ),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Text(text = "Bạn bè")
+            }
+        } else {
+            // Hiển thị nút "Xóa lời mời"
+            Button(
+                onClick = onCancelFriendRequest,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorResource(id = R.color.color_b36a5e),
+                    contentColor = Color.Black
+                ),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Text(text = "Xóa lời mời")
+            }
+        }
     }
 }
-
-
 
 @Composable
 fun FriendRequestItem(
     request: FriendRequest,
     onAccept: () -> Unit,
-    onDecline: () -> Unit
+    onDecline: () -> Unit,
+    onProfileClick: () -> Unit
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .background(colorResource(id = R.color.color_c89f9c), shape = RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "${request.fromName} muốn kết bạn với bạn",
+            text = request.fromName,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth()
+            color = Color.Black,
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onProfileClick() }
         )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+        IconButton(
+            onClick = onAccept,
+            modifier = Modifier.size(32.dp)
         ) {
-            Button(onClick = onAccept, modifier = Modifier.weight(1f)) {
-                Text(text = "Chấp nhận")
-            }
-            Button(onClick = onDecline, modifier = Modifier.weight(1f)) {
-                Text(text = "Từ chối")
-            }
+            Icon(
+                painter = painterResource(id = R.drawable.check),
+                contentDescription = "Chấp nhận",
+                tint = Color(0xFF388E3C),
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        IconButton(
+            onClick = onDecline,
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.close),
+                contentDescription = "Từ chối",
+                tint = Color.Red,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
@@ -581,4 +475,3 @@ fun FindFriendsScreenPreview() {
     val navController = rememberNavController()
     FindFriendsScreen(navController)
 }
-

@@ -96,7 +96,6 @@ fun EditableProfileInfoRow(
     }
 }
 
-
 @Composable
 fun ProfileContent(
     modifier: Modifier = Modifier,
@@ -286,7 +285,12 @@ fun ProfileInfoRow(
 fun ProfileScreen(
     navController: NavController? = null,
     onBackClick: () -> Unit = { navController?.popBackStack() },
-    onMatchHistoryClick: () -> Unit = { navController?.navigate("match_history") },
+    onMatchHistoryClick: () -> Unit = {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            navController?.navigate("match_history/$userId")
+        }
+    },
 ) {
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
@@ -296,7 +300,6 @@ fun ProfileScreen(
     val context = LocalContext.current
     var isFetchingData by remember { mutableStateOf(true) }
 
-    // State để lưu trữ tên có thể chỉnh sửa
     var editableName by remember { mutableStateOf("") }
 
     LaunchedEffect(userData) {
@@ -313,7 +316,7 @@ fun ProfileScreen(
                     if (document.exists()) {
                         userData = document.data
                         description = document.getString("description") ?: ""
-                        editableName = document.getString("name") ?: "" // Khởi tạo editableName
+                        editableName = document.getString("name") ?: ""
                     }
                     isFetchingData = false
                 }
@@ -344,8 +347,7 @@ fun ProfileScreen(
                 onDescriptionChange = { description = it },
                 onEditClick = {
                     isEditing = true
-                    editableName =
-                        userData?.get("name")?.toString() ?: "" // Cập nhật khi bắt đầu chỉnh sửa
+                    editableName = userData?.get("name")?.toString() ?: ""
                 },
                 onSaveClick = { currentEditableName ->
                     if (isEditing) {
@@ -353,7 +355,6 @@ fun ProfileScreen(
                         val userId = user?.uid
 
                         if (userId != null) {
-                            // Cập nhật tên trong Firestore
                             if (userData?.get("name")?.toString() != currentEditableName && currentEditableName != null) {
                                 firestore.collection("users")
                                     .document(userId)
@@ -367,7 +368,6 @@ fun ProfileScreen(
                                     }
                             }
 
-                            // Lưu mô tả
                             firestore.collection("users")
                                 .document(userId)
                                 .update("description", description)
@@ -394,7 +394,6 @@ fun ProfileScreen(
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable

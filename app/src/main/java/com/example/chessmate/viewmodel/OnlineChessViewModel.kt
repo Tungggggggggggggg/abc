@@ -1,14 +1,16 @@
 package com.example.chessmate.viewmodel
 
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.chessmate.model.ChessGame
 import com.example.chessmate.model.ChessPiece
 import com.example.chessmate.model.Move
 import com.example.chessmate.model.PieceColor
 import com.example.chessmate.model.PieceType
 import com.example.chessmate.model.Position
+import com.example.chessmate.model.ChatMessage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,18 +21,22 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
-import android.util.Log
 
 class OnlineChessViewModel : ViewModel() {
     private val db: FirebaseFirestore = Firebase.firestore
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    val board = mutableStateOf(Array(8) { Array<ChessPiece?>(8) { null } })
-    val currentTurn = mutableStateOf(PieceColor.WHITE)
+    private val chessGame = ChessGame()
+
+    val board = mutableStateOf(chessGame.getBoard())
+    val currentTurn = mutableStateOf(chessGame.getCurrentTurn())
     val highlightedSquares = mutableStateOf<List<Move>>(emptyList())
-    val isGameOver = mutableStateOf(false)
-    val gameResult = mutableStateOf<String?>(null)
+    val isGameOver = mutableStateOf(chessGame.isGameOver())
+    val gameResult = mutableStateOf<String?>(chessGame.getGameResult())
     val whiteTime = mutableStateOf(600)
     val blackTime = mutableStateOf(600)
     val isPromoting = mutableStateOf(false)
@@ -38,75 +44,80 @@ class OnlineChessViewModel : ViewModel() {
     val playerColor = mutableStateOf<PieceColor?>(null)
     val drawRequest = mutableStateOf<String?>(null)
     val moveHistory = mutableStateListOf<String>()
+    val chatMessages = mutableStateListOf<ChatMessage>()
+    val hasUnreadMessages = mutableStateOf(false)
     private val matchData = mutableStateOf<Map<String, Any>?>(null)
     val matchmakingError = mutableStateOf<String?>(null)
 
-    // Thêm các biến để kiểm tra luật hòa
-    private val positionHistory = mutableMapOf<String, Int>()
-    private var fiftyMoveCounter = 0
-    private var whiteKingPosition = Position(0, 4)
-    private var blackKingPosition = Position(7, 4)
-    private var lastMove: Pair<Position, Position>? = null
-
     private var timerJob: Job? = null
     private var matchListener: ListenerRegistration? = null
+    private var chatListener: ListenerRegistration? = null
     private var matchmakingListener: ListenerRegistration? = null
     private var matchmakingJob: Job? = null
     private val isMatchmaking = AtomicBoolean(false)
+    private var lastMoveByThisDevice = false
+    private var messageSequence = 0L
+
+    sealed class MatchStatus {
+        object Ongoing : MatchStatus()
+        object Draw : MatchStatus()
+        object Surrendered : MatchStatus()
+        object Checkmate : MatchStatus()
+
+        override fun toString(): String {
+            return when (this) {
+                is Ongoing -> "ongoing"
+                is Draw -> "draw"
+                is Surrendered -> "surrendered"
+                is Checkmate -> "checkmate"
+            }
+        }
+
+        companion object {
+            fun fromString(status: String?): MatchStatus {
+                return when (status) {
+                    "draw" -> Draw
+                    "surrendered" -> Surrendered
+                    "checkmate" -> Checkmate
+                    "ongoing" -> Ongoing
+                    else -> Ongoing
+                }
+            }
+        }
+    }
 
     init {
         startMatchmaking()
     }
 
     fun startMatchmaking() {
-        Log.d("Matchmaking", "startMatchmaking() được gọi")
-        val userId = auth.currentUser?.uid
-        Log.d("Matchmaking", "userId: $userId")
-
-        if (userId == null) {
+        val userId = auth.currentUser?.uid ?: run {
             matchmakingError.value = "Vui lòng đăng nhập để chơi trực tuyến."
-            Log.e("Matchmaking", "Người dùng chưa đăng nhập")
             return
         }
-
-        if (isMatchmaking.get()) {
-            Log.d("Matchmaking", "Đang trong quá trình tìm kiếm rồi, bỏ qua")
-            return
-        }
+        if (isMatchmaking.get()) return
 
         isMatchmaking.set(true)
-        Log.d("Matchmaking", "Bắt đầu quá trình tìm kiếm")
-
         val queueData = hashMapOf(
             "userId" to userId,
             "timestamp" to FieldValue.serverTimestamp(),
             "status" to "waiting",
             "matchId" to null
         )
-        Log.d("Matchmaking", "Dữ liệu hàng đợi được tạo: $queueData")
 
         viewModelScope.launch {
-            Log.d("Matchmaking", "Coroutine được khởi chạy")
             try {
-                Log.d("Matchmaking", "Đang cố gắng ghi vào matchmaking_queue với userId: $userId")
                 db.collection("matchmaking_queue")
                     .document(userId)
                     .set(queueData)
                     .await()
-                Log.d("Matchmaking", "Ghi vào matchmaking_queue thành công")
                 listenForMatchmaking(userId)
-                Log.d("Matchmaking", "Đã gọi listenForMatchmaking()")
             } catch (e: Exception) {
-                Log.e("Matchmaking", "Lỗi khi tham gia hàng đợi: ${e.message}", e)
                 matchmakingError.value = "Không thể tham gia hàng đợi: ${e.message}"
                 isMatchmaking.set(false)
-                Log.d("Matchmaking", "Đã đặt isMatchmaking thành false")
                 db.collection("matchmaking_queue").document(userId).delete()
-                Log.d("Matchmaking", "Đã xóa khỏi matchmaking_queue do lỗi")
             }
-            Log.d("Matchmaking", "Coroutine kết thúc")
         }
-        Log.d("Matchmaking", "Hàm startMatchmaking() kết thúc")
     }
 
     private fun listenForMatchmaking(userId: String) {
@@ -126,11 +137,30 @@ class OnlineChessViewModel : ViewModel() {
                 if (status == "matched" && matchIdFromQueue != null) {
                     matchId.value = matchIdFromQueue
                     viewModelScope.launch {
-                        val matchDoc = db.collection("matches").document(matchIdFromQueue).get().await()
-                        val player1Id = matchDoc.getString("player1")
-                        playerColor.value = if (auth.currentUser?.uid == player1Id) PieceColor.WHITE else PieceColor.BLACK
-                        listenToMatchUpdates()
-                        startTimer()
+                        try {
+                            val matchDoc = db.collection("matches").document(matchIdFromQueue).get().await()
+                            if (!matchDoc.exists()) {
+                                matchmakingError.value = "Trận đấu không tồn tại."
+                                cancelMatchmaking()
+                                return@launch
+                            }
+                            val player1Id = matchDoc.getString("player1")
+                            val player2Id = matchDoc.getString("player2")
+                            val currentUserId = auth.currentUser?.uid
+                            if (player1Id == null || player2Id == null || currentUserId == null) {
+                                matchmakingError.value = "Không thể xác định người chơi."
+                                cancelMatchmaking()
+                                return@launch
+                            }
+                            if (playerColor.value == null) {
+                                playerColor.value = if (currentUserId == player1Id) PieceColor.WHITE else PieceColor.BLACK
+                            }
+                            listenToMatchUpdates()
+                            startTimer()
+                        } catch (e: Exception) {
+                            matchmakingError.value = "Lỗi khi truy xuất trận đấu: ${e.message}"
+                            cancelMatchmaking()
+                        }
                     }
                     db.collection("matchmaking_queue").document(userId).delete()
                     isMatchmaking.set(false)
@@ -141,26 +171,6 @@ class OnlineChessViewModel : ViewModel() {
                     }
                 }
             }
-    }
-
-    private suspend fun tryMatchmaking(userId: String) {
-        matchmakingJob?.cancel()
-        matchmakingJob = viewModelScope.launch {
-            val timeoutSeconds = 60L
-            val startTime = System.currentTimeMillis()
-
-            while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000 && isMatchmaking.get()) {
-                val matched = tryMatchWithOpponent(userId)
-                if (matched) return@launch
-                delay(2000L)
-            }
-
-            if (isMatchmaking.get()) {
-                db.collection("matchmaking_queue").document(userId).delete()
-                matchmakingError.value = "Không tìm thấy đối thủ trong $timeoutSeconds giây."
-                isMatchmaking.set(false)
-            }
-        }
     }
 
     private suspend fun tryMatchWithOpponent(userId: String): Boolean {
@@ -189,12 +199,23 @@ class OnlineChessViewModel : ViewModel() {
                 "currentTurn" to PieceColor.WHITE.toString(),
                 "whiteTime" to 600,
                 "blackTime" to 600,
-                "status" to "ongoing",
+                "status" to MatchStatus.Ongoing.toString(),
                 "winner" to null,
                 "drawRequest" to null,
                 "lastMove" to null,
+                "fiftyMoveCounter" to 0,
+                "positionHistory" to chessGame.getPositionHistory(),
                 "moveHistory" to emptyList<String>(),
-                "fiftyMoveCounter" to 0
+                "whiteKingPosition" to mapOf("row" to 0, "col" to 4),
+                "blackKingPosition" to mapOf("row" to 7, "col" to 4),
+                "hasMoved" to mapOf(
+                    "white_king" to false,
+                    "white_kingside_rook" to false,
+                    "white_queenside_rook" to false,
+                    "black_king" to false,
+                    "black_kingside_rook" to false,
+                    "black_queenside_rook" to false
+                )
             )
 
             val success = db.runTransaction { transaction ->
@@ -219,7 +240,9 @@ class OnlineChessViewModel : ViewModel() {
 
             if (success) {
                 this.matchId.value = matchId
-                playerColor.value = PieceColor.WHITE
+                if (playerColor.value == null) {
+                    playerColor.value = PieceColor.WHITE
+                }
                 listenToMatchUpdates()
                 startTimer()
                 return true
@@ -229,6 +252,26 @@ class OnlineChessViewModel : ViewModel() {
             matchmakingError.value = "Lỗi khi ghép cặp: ${e.message}"
             db.collection("matchmaking_queue").document(userId).delete()
             return false
+        }
+    }
+
+    private suspend fun tryMatchmaking(userId: String) {
+        matchmakingJob?.cancel()
+        matchmakingJob = viewModelScope.launch {
+            val timeoutSeconds = 60L
+            val startTime = System.currentTimeMillis()
+
+            while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000 && isMatchmaking.get()) {
+                val matched = tryMatchWithOpponent(userId)
+                if (matched) return@launch
+                delay(2000L)
+            }
+
+            if (isMatchmaking.get()) {
+                db.collection("matchmaking_queue").document(userId).delete()
+                matchmakingError.value = "Không tìm thấy đối thủ trong $timeoutSeconds giây."
+                isMatchmaking.set(false)
+            }
         }
     }
 
@@ -243,6 +286,13 @@ class OnlineChessViewModel : ViewModel() {
                         return@addSnapshotListener
                     }
 
+                    if (!snapshot.exists()) {
+                        isGameOver.value = true
+                        gameResult.value = "Đối thủ đã thoát. Bạn thắng!"
+                        timerJob?.cancel()
+                        return@addSnapshotListener
+                    }
+
                     val matchDataValue = snapshot.data ?: return@addSnapshotListener
                     matchData.value = matchDataValue
 
@@ -250,52 +300,95 @@ class OnlineChessViewModel : ViewModel() {
                     val currentTurnStr = matchDataValue["currentTurn"] as? String
                     val whiteTimeData = matchDataValue["whiteTime"] as? Long
                     val blackTimeData = matchDataValue["blackTime"] as? Long
-                    val status = matchDataValue["status"] as? String
+                    val status = MatchStatus.fromString(matchDataValue["status"] as? String)
                     val winner = matchDataValue["winner"] as? String
                     val drawRequestData = matchDataValue["drawRequest"] as? String
                     val moveHistoryData = matchDataValue["moveHistory"] as? List<String>
-                    val lastMoveData = matchDataValue["lastMove"] as? Map<String, Map<String, Long>>
                     val fiftyMoveCounterData = matchDataValue["fiftyMoveCounter"] as? Long
+                    val positionHistoryData = matchDataValue["positionHistory"] as? List<String>
+                    val whiteKingPositionData = matchDataValue["whiteKingPosition"] as? Map<String, Long>
+                    val blackKingPositionData = matchDataValue["blackKingPosition"] as? Map<String, Long>
+                    val hasMovedData = matchDataValue["hasMoved"] as? Map<String, Boolean>
+                    val lastMoveData = matchDataValue["lastMove"] as? Map<String, Map<String, Long>>
 
                     if (boardData != null) {
-                        board.value = flatMapToBoard(boardData)
+                        val newBoard = flatMapToBoard(boardData)
+                        for (row in 0 until 8) {
+                            for (col in 0 until 8) {
+                                chessGame.getBoard()[row][col] = newBoard[row][col]
+                            }
+                        }
+                        board.value = chessGame.getBoard()
                     }
-                    currentTurn.value = PieceColor.valueOf(currentTurnStr ?: "WHITE")
+
+                    if (!lastMoveByThisDevice) {
+                        val newTurn = try {
+                            PieceColor.valueOf(currentTurnStr ?: "WHITE")
+                        } catch (e: Exception) {
+                            PieceColor.WHITE
+                        }
+                        currentTurn.value = newTurn
+                        chessGame.setCurrentTurn(newTurn)
+                    }
+                    lastMoveByThisDevice = false
+
                     whiteTime.value = (whiteTimeData ?: 600).toInt()
                     blackTime.value = (blackTimeData ?: 600).toInt()
                     drawRequest.value = drawRequestData
                     moveHistory.clear()
                     moveHistory.addAll(moveHistoryData ?: emptyList())
-                    fiftyMoveCounter = (fiftyMoveCounterData ?: 0).toInt()
 
-                    if (lastMoveData != null) {
-                        val from = lastMoveData["from"]?.let { Position(it["row"]!!.toInt(), it["col"]!!.toInt()) }
-                        val to = lastMoveData["to"]?.let { Position(it["row"]!!.toInt(), it["col"]!!.toInt()) }
-                        if (from != null && to != null) {
-                            lastMove = Pair(from, to)
+                    if (fiftyMoveCounterData != null) {
+                        chessGame.setFiftyMoveCounter(fiftyMoveCounterData.toInt())
+                    }
+                    if (positionHistoryData != null) {
+                        chessGame.setPositionHistory(positionHistoryData)
+                    }
+                    if (whiteKingPositionData != null) {
+                        val row = whiteKingPositionData["row"]?.toInt() ?: 0
+                        val col = whiteKingPositionData["col"]?.toInt() ?: 4
+                        chessGame.setWhiteKingPosition(Position(row, col))
+                    }
+                    if (blackKingPositionData != null) {
+                        val row = blackKingPositionData["row"]?.toInt() ?: 7
+                        val col = blackKingPositionData["col"]?.toInt() ?: 4
+                        chessGame.setBlackKingPosition(Position(row, col))
+                    }
+                    if (hasMovedData != null) {
+                        hasMovedData.forEach { (key, value) ->
+                            chessGame.setHasMoved(key, value)
                         }
                     }
-
-                    if (playerColor.value == null) {
-                        playerColor.value = if (auth.currentUser?.uid == matchDataValue["player1"]) PieceColor.WHITE else PieceColor.BLACK
+                    if (lastMoveData != null) {
+                        val fromData = lastMoveData["from"]
+                        val toData = lastMoveData["to"]
+                        val from = if (fromData != null) {
+                            Position(fromData["row"]?.toInt() ?: 0, fromData["col"]?.toInt() ?: 0)
+                        } else null
+                        val to = if (toData != null) {
+                            Position(toData["row"]?.toInt() ?: 0, toData["col"]?.toInt() ?: 0)
+                        } else null
+                        chessGame.setLastMove(from, to)
                     }
 
-                    // Cập nhật vị trí vua
-                    updateKingPositions()
+                    chessGame.updateGameState()
+                    isGameOver.value = chessGame.isGameOver() || status != MatchStatus.Ongoing
+                    gameResult.value = chessGame.getGameResult()
 
-                    // Kiểm tra trạng thái game
-                    checkGameState()
-
-                    if (status != "ongoing") {
+                    if (status != MatchStatus.Ongoing || chessGame.isGameOver()) {
                         isGameOver.value = true
-                        gameResult.value = when (status) {
-                            "draw" -> "Ván đấu hòa."
-                            "surrendered" -> if (winner == auth.currentUser?.uid) "Bạn thắng!" else "Bạn thua!"
-                            "checkmate" -> if (winner == auth.currentUser?.uid) "Bạn thắng!" else "Bạn thua!"
-                            else -> "Trò chơi kết thúc."
+                        gameResult.value = when {
+                            status == MatchStatus.Draw -> {
+                                chessGame.getGameResult() ?: "Hết cờ! Ván đấu hòa."
+                            }
+                            status == MatchStatus.Surrendered -> if (winner == auth.currentUser?.uid) "Bạn thắng! Vì đối thủ đầu hàng" else "Bạn thua! Vì đã đầu hàng"
+                            status == MatchStatus.Checkmate || chessGame.isCheckmatePublic() -> if (winner == auth.currentUser?.uid) "Bạn thắng! Vì đã chiếu hết đối thủ" else "Bạn thua! Vì đã bị đối thủ chiếu hết"
+                            else -> chessGame.getGameResult() ?: "Trò chơi kết thúc."
                         }
                         timerJob?.cancel()
                     }
+
+                    listenToChatMessages()
                 }
         }
     }
@@ -306,108 +399,236 @@ class OnlineChessViewModel : ViewModel() {
             while (!isGameOver.value && !isPromoting.value) {
                 delay(1000L)
                 matchId.value?.let { id ->
-                    db.runTransaction { transaction ->
-                        val matchRef = db.collection("matches").document(id)
-                        val snapshot = transaction.get(matchRef)
-                        val currentTurnStr = snapshot.getString("currentTurn") ?: "WHITE"
-                        val currentTurn = PieceColor.valueOf(currentTurnStr)
-                        var whiteTime = (snapshot.getLong("whiteTime") ?: 600).toInt()
-                        var blackTime = (snapshot.getLong("blackTime") ?: 600).toInt()
+                    try {
+                        db.runTransaction { transaction ->
+                            val matchRef = db.collection("matches").document(id)
+                            val snapshot = transaction.get(matchRef)
 
-                        if (currentTurn == PieceColor.WHITE) {
-                            whiteTime = (whiteTime - 1).coerceAtLeast(0)
-                            transaction.update(matchRef, "whiteTime", whiteTime)
-                            if (whiteTime == 0) {
-                                transaction.update(
-                                    matchRef,
-                                    mapOf(
-                                        "status" to "checkmate",
-                                        "winner" to snapshot.getString("player2")
-                                    )
-                                )
+                            if (!snapshot.exists()) {
+                                isGameOver.value = true
+                                gameResult.value = "Trận đấu đã kết thúc do tài liệu bị xóa."
+                                timerJob?.cancel()
+                                return@runTransaction
                             }
-                        } else {
-                            blackTime = (blackTime - 1).coerceAtLeast(0)
-                            transaction.update(matchRef, "blackTime", blackTime)
-                            if (blackTime == 0) {
-                                transaction.update(
-                                    matchRef,
-                                    mapOf(
-                                        "status" to "checkmate",
-                                        "winner" to snapshot.getString("player1")
+
+                            var whiteTime = (snapshot.getLong("whiteTime") ?: 600).toInt()
+                            var blackTime = (snapshot.getLong("blackTime") ?: 600).toInt()
+
+                            if (currentTurn.value == PieceColor.WHITE) {
+                                whiteTime = (whiteTime - 1).coerceAtLeast(0)
+                                transaction.update(matchRef, "whiteTime", whiteTime)
+                                if (whiteTime == 0) {
+                                    transaction.update(
+                                        matchRef,
+                                        mapOf(
+                                            "status" to MatchStatus.Checkmate.toString(),
+                                            "winner" to snapshot.getString("player2")
+                                        )
                                     )
-                                )
+                                }
+                            } else {
+                                blackTime = (blackTime - 1).coerceAtLeast(0)
+                                transaction.update(matchRef, "blackTime", blackTime)
+                                if (blackTime == 0) {
+                                    transaction.update(
+                                        matchRef,
+                                        mapOf(
+                                            "status" to MatchStatus.Checkmate.toString(),
+                                            "winner" to snapshot.getString("player1")
+                                        )
+                                    )
+                                }
                             }
+                        }.await()
+                    } catch (e: Exception) {
+                        matchmakingError.value = "Lỗi cập nhật thời gian: ${e.message}"
+                        timerJob?.cancel()
+                    }
+                } ?: run {
+                    timerJob?.cancel()
+                }
+            }
+        }
+    }
+
+    fun listenToChatMessages() {
+        matchId.value?.let { id ->
+            chatListener?.remove()
+            chatListener = db.collection("matches")
+                .document(id)
+                .collection("chat_messages")
+                .orderBy("timestamp")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) {
+                        matchmakingError.value = "Lỗi tải tin nhắn: ${error?.message}"
+                        return@addSnapshotListener
+                    }
+                    val messages = mutableListOf<Pair<String, ChatMessage>>()
+                    snapshot.documents.forEach { doc ->
+                        val senderId = doc.getString("senderId") ?: return@forEach
+                        val message = doc.getString("message") ?: return@forEach
+                        val timestamp = doc.getLong("timestamp") ?: return@forEach
+                        val sequence = doc.getLong("sequence") ?: 0
+                        val readBy = doc.get("readBy") as? List<String> ?: emptyList()
+                        messages.add(doc.id to ChatMessage(senderId, message, timestamp, sequence, readBy))
+                    }
+                    // Sắp xếp theo timestamp, sau đó theo sequence để đảm bảo thứ tự
+                    messages.sortWith(compareBy({ it.second.timestamp }, { it.second.sequence }))
+                    chatMessages.clear()
+                    chatMessages.addAll(messages.map { it.second })
+
+                    // Kiểm tra tin nhắn chưa đọc
+                    val currentUserId = auth.currentUser?.uid
+                    if (currentUserId != null) {
+                        hasUnreadMessages.value = chatMessages.any { message ->
+                            message.senderId != currentUserId && !message.readBy.contains(currentUserId)
                         }
-                    }.await()
+                    }
+                }
+        }
+    }
+
+    fun sendMessage(message: String) {
+        val userId = auth.currentUser?.uid ?: return
+        if (message.trim().isEmpty() || message.length > 200) return
+        matchId.value?.let { id ->
+            val chatData = hashMapOf(
+                "senderId" to userId,
+                "message" to message.trim(),
+                "timestamp" to System.currentTimeMillis(),
+                "sequence" to messageSequence++,
+                "readBy" to listOf(userId)
+            )
+            db.collection("matches")
+                .document(id)
+                .collection("chat_messages")
+                .add(chatData)
+                .addOnFailureListener { e ->
+                    matchmakingError.value = "Lỗi gửi tin nhắn: ${e.message}"
+                }
+        }
+    }
+
+    fun markMessagesAsRead() {
+        val currentUserId = auth.currentUser?.uid ?: return
+        matchId.value?.let { id ->
+            viewModelScope.launch {
+                try {
+                    // Lấy tất cả tin nhắn không phải do người dùng hiện tại gửi
+                    val snapshot = db.collection("matches")
+                        .document(id)
+                        .collection("chat_messages")
+                        .whereNotEqualTo("senderId", currentUserId)
+                        .get()
+                        .await()
+
+                    // Lọc các tin nhắn chưa có currentUserId trong readBy
+                    val unreadMessages = snapshot.documents.filter { doc ->
+                        val readBy = doc.get("readBy") as? List<String> ?: emptyList()
+                        !readBy.contains(currentUserId)
+                    }
+
+                    // Cập nhật readBy trong một giao dịch
+                    if (unreadMessages.isNotEmpty()) {
+                        db.runTransaction { transaction ->
+                            for (doc in unreadMessages) {
+                                val ref = db.collection("matches")
+                                    .document(id)
+                                    .collection("chat_messages")
+                                    .document(doc.id)
+                                transaction.update(ref, "readBy", FieldValue.arrayUnion(currentUserId))
+                            }
+                        }.await()
+                    }
+                } catch (e: Exception) {
+                    matchmakingError.value = "Lỗi đánh dấu tin nhắn đã đọc: ${e.message}"
                 }
             }
         }
     }
 
     fun onSquareClicked(row: Int, col: Int) {
-        if (isPromoting.value || playerColor.value != currentTurn.value || matchId.value == null) return
+        if (isPromoting.value || playerColor.value != currentTurn.value || matchId.value == null) {
+            return
+        }
 
         val position = Position(row, col)
         val selectedMove = highlightedSquares.value.find { it.position == position }
         if (selectedMove != null) {
-            val fromPosition = selectedMove.from
-            val toPosition = selectedMove.position
-            val piece = board.value[fromPosition.row][fromPosition.col]
-            if (piece != null) {
-                val targetPiece = board.value[toPosition.row][toPosition.col]
-                board.value[fromPosition.row][fromPosition.col] = null
-                board.value[toPosition.row][toPosition.col] = piece.copy(position = toPosition)
+            val pieceBeforeMove = chessGame.getPieceAt(selectedMove.from.row, selectedMove.from.col)
+            val moveNotation = if (pieceBeforeMove != null) {
+                val pieceColorStr = if (pieceBeforeMove.color == PieceColor.WHITE) "trắng" else "đen"
+                "${pieceBeforeMove.type} $pieceColorStr từ ${positionToString(selectedMove.from)} đến ${positionToString(position)}"
+            } else {
+                "Nước đi không xác định"
+            }
 
-                // Kiểm tra phong cấp
-                if (piece.type == PieceType.PAWN && (toPosition.row == 0 || toPosition.row == 7)) {
+            if (chessGame.movePiece(position)) {
+                lastMoveByThisDevice = true
+                if (chessGame.getPendingPromotion() != null) {
                     isPromoting.value = true
                     timerJob?.cancel()
                 } else {
-                    currentTurn.value = if (currentTurn.value == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
+                    currentTurn.value = chessGame.getCurrentTurn()
                     startTimer()
                 }
 
-                // Cập nhật lịch sử nước đi
-                val moveNotation = "${piece.type} từ ${positionToString(fromPosition)} đến ${positionToString(toPosition)}"
                 moveHistory.add(moveNotation)
 
-                // Cập nhật fiftyMoveCounter
-                if (piece.type == PieceType.PAWN || targetPiece != null) {
-                    fiftyMoveCounter = 0
-                } else {
-                    fiftyMoveCounter++
+                if (chessGame.isGameOver()) {
+                    val winnerId = if (chessGame.isCheckmatePublic()) {
+                        if (currentTurn.value == PieceColor.WHITE) matchData.value?.get("player2") as? String
+                        else matchData.value?.get("player1") as? String
+                    } else null
+                    endMatch(
+                        status = when {
+                            chessGame.isCheckmatePublic() -> MatchStatus.Checkmate
+                            chessGame.isStalematePublic() -> MatchStatus.Draw
+                            chessGame.isDrawByFiftyMoveRulePublic() -> MatchStatus.Draw
+                            chessGame.isDrawByRepetitionPublic() -> MatchStatus.Draw
+                            else -> MatchStatus.Ongoing
+                        },
+                        winner = winnerId
+                    )
                 }
 
-                // Cập nhật lastMove
-                lastMove = Pair(fromPosition, toPosition)
-
-                // Lưu trạng thái bàn cờ để kiểm tra lặp lại vị trí
-                saveBoardState()
-
-                // Cập nhật Firestore
                 matchId.value?.let { id ->
+                    val lastMove = chessGame.getLastMove()
                     db.collection("matches")
                         .document(id)
                         .update(
                             mapOf(
-                                "board" to boardToFlatMap(board.value),
+                                "board" to boardToFlatMap(chessGame.getBoard()),
                                 "currentTurn" to currentTurn.value.toString(),
-                                "lastMove" to mapOf(
-                                    "from" to mapOf("row" to fromPosition.row, "col" to fromPosition.col),
-                                    "to" to mapOf("row" to toPosition.row, "col" to toPosition.col)
-                                ),
                                 "moveHistory" to moveHistory.toList(),
-                                "fiftyMoveCounter" to fiftyMoveCounter
+                                "fiftyMoveCounter" to chessGame.getFiftyMoveCounter(),
+                                "positionHistory" to chessGame.getPositionHistory(),
+                                "whiteKingPosition" to mapOf(
+                                    "row" to chessGame.getWhiteKingPosition().row,
+                                    "col" to chessGame.getWhiteKingPosition().col
+                                ),
+                                "blackKingPosition" to mapOf(
+                                    "row" to chessGame.getBlackKingPosition().row,
+                                    "col" to chessGame.getBlackKingPosition().col
+                                ),
+                                "hasMoved" to chessGame.getHasMoved(),
+                                "lastMove" to lastMove?.let {
+                                    mapOf(
+                                        "from" to mapOf("row" to it.first.row, "col" to it.first.col),
+                                        "to" to mapOf("row" to it.second.row, "col" to it.second.col)
+                                    )
+                                }
                             )
                         )
                 }
+                board.value = chessGame.getBoard()
             }
             highlightedSquares.value = emptyList()
         } else {
-            val piece = board.value[row][col]
+            val piece = chessGame.getPieceAt(row, col)
             if (piece != null && piece.color == playerColor.value) {
-                highlightedSquares.value = getPossibleMoves(piece, Position(row, col))
+                val moves = chessGame.selectPiece(row, col)
+                highlightedSquares.value = moves
             } else {
                 highlightedSquares.value = emptyList()
             }
@@ -415,33 +636,65 @@ class OnlineChessViewModel : ViewModel() {
     }
 
     fun promotePawn(toType: PieceType) {
-        val pawnPosition = board.value.flatMapIndexed { row, cols ->
-            cols.mapIndexedNotNull { col, piece ->
-                if (piece?.type == PieceType.PAWN && (row == 0 || row == 7)) Position(row, col) else null
-            }
-        }.firstOrNull()
+        chessGame.promotePawn(toType)
+        lastMoveByThisDevice = true
+        isPromoting.value = false
+        currentTurn.value = chessGame.getCurrentTurn()
 
-        pawnPosition?.let { pos ->
-            val piece = board.value[pos.row][pos.col]
-            if (piece != null) {
-                board.value[pos.row][pos.col] = piece.copy(type = toType)
-            }
+        val lastMove = chessGame.getLastMove()
+        if (lastMove != null) {
+            val piece = board.value[lastMove.second.row][lastMove.second.col]
+            val moveNotation = "Phong cấp ${piece?.type} tại ${positionToString(lastMove.second)}"
+            moveHistory.add(moveNotation)
         }
 
-        isPromoting.value = false
-        currentTurn.value = if (currentTurn.value == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
+        if (chessGame.isGameOver()) {
+            val winnerId = if (chessGame.isCheckmatePublic()) {
+                if (currentTurn.value == PieceColor.WHITE) matchData.value?.get("player2") as? String
+                else matchData.value?.get("player1") as? String
+            } else null
+            endMatch(
+                status = when {
+                    chessGame.isCheckmatePublic() -> MatchStatus.Checkmate
+                    chessGame.isStalematePublic() -> MatchStatus.Draw
+                    chessGame.isDrawByFiftyMoveRulePublic() -> MatchStatus.Draw
+                    chessGame.isDrawByRepetitionPublic() -> MatchStatus.Draw
+                    else -> MatchStatus.Ongoing
+                },
+                winner = winnerId
+            )
+        }
+
         matchId.value?.let { id ->
+            val lastMove = chessGame.getLastMove()
             db.collection("matches")
                 .document(id)
                 .update(
                     mapOf(
-                        "board" to boardToFlatMap(board.value),
+                        "board" to boardToFlatMap(chessGame.getBoard()),
                         "currentTurn" to currentTurn.value.toString(),
                         "moveHistory" to moveHistory.toList(),
-                        "fiftyMoveCounter" to fiftyMoveCounter
+                        "fiftyMoveCounter" to chessGame.getFiftyMoveCounter(),
+                        "positionHistory" to chessGame.getPositionHistory(),
+                        "whiteKingPosition" to mapOf(
+                            "row" to chessGame.getWhiteKingPosition().row,
+                            "col" to chessGame.getWhiteKingPosition().col
+                        ),
+                        "blackKingPosition" to mapOf(
+                            "row" to chessGame.getBlackKingPosition().row,
+                            "col" to chessGame.getBlackKingPosition().col
+                        ),
+                        "hasMoved" to chessGame.getHasMoved(),
+                        "lastMove" to lastMove?.let {
+                            mapOf(
+                                "from" to mapOf("row" to it.first.row, "col" to it.first.col),
+                                "to" to mapOf("row" to it.second.row, "col" to it.second.col)
+                            )
+                        }
                     )
                 )
         }
+        board.value = chessGame.getBoard()
         startTimer()
     }
 
@@ -454,7 +707,7 @@ class OnlineChessViewModel : ViewModel() {
     }
 
     fun acceptDraw() {
-        endMatch(status = "draw", winner = null)
+        endMatch(status = MatchStatus.Draw, winner = null, drawReason = "Hòa do thỏa thuận giữa hai người chơi.")
     }
 
     fun declineDraw() {
@@ -471,55 +724,116 @@ class OnlineChessViewModel : ViewModel() {
         } else {
             matchData.value?.get("player1") as? String
         }
-        endMatch(status = "surrendered", winner = opponentId)
+        endMatch(status = MatchStatus.Surrendered, winner = opponentId)
     }
 
-    private fun endMatch(status: String, winner: String?) {
+    private suspend fun updateScores(player1Id: String, player2Id: String, winner: String?) {
+        try {
+            db.runTransaction { transaction ->
+                val player1Ref = db.collection("users").document(player1Id)
+                val player2Ref = db.collection("users").document(player2Id)
+
+                val player1Doc = transaction.get(player1Ref)
+                val player2Doc = transaction.get(player2Ref)
+
+                val player1Score = (player1Doc.getLong("score") ?: 0).toInt()
+                val player2Score = (player2Doc.getLong("score") ?: 0).toInt()
+
+                when {
+                    winner == player1Id -> {
+                        transaction.update(player1Ref, mapOf("score" to player1Score + 10))
+                        transaction.update(player2Ref, mapOf("score" to (player2Score - 5).coerceAtLeast(0)))
+                    }
+                    winner == player2Id -> {
+                        transaction.update(player2Ref, mapOf("score" to player2Score + 10))
+                        transaction.update(player1Ref, mapOf("score" to (player1Score - 5).coerceAtLeast(0)))
+                    }
+                    else -> {}
+                }
+            }.await()
+        } catch (e: Exception) {
+            matchmakingError.value = "Lỗi cập nhật điểm: ${e.message}"
+        }
+    }
+
+    private suspend fun saveMatchHistory(player1Id: String, player2Id: String, status: MatchStatus, winner: String?) {
+        try {
+            val player1Doc = db.collection("users").document(player1Id).get().await()
+            val player2Doc = db.collection("users").document(player2Id).get().await()
+
+            val player1Name = player1Doc.getString("name") ?: player1Doc.getString("username") ?: "Người chơi 1"
+            val player2Name = player2Doc.getString("name") ?: player2Doc.getString("username") ?: "Người chơi 2"
+
+            val player1Result = when {
+                status == MatchStatus.Draw -> "Hòa"
+                winner == player1Id -> "Thắng"
+                winner == player2Id -> "Thua"
+                else -> "Hòa"
+            }
+            val player2Result = when {
+                status == MatchStatus.Draw -> "Hòa"
+                winner == player1Id -> "Thua"
+                winner == player2Id -> "Thắng"
+                else -> "Hòa"
+            }
+
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val currentDate = dateFormat.format(Date())
+
+            val player1MatchData = mapOf(
+                "result" to player1Result,
+                "date" to currentDate,
+                "moves" to moveHistory.size,
+                "opponent" to player2Name
+            )
+            db.collection("users").document(player1Id)
+                .collection("match_history")
+                .add(player1MatchData)
+                .await()
+
+            val player2MatchData = mapOf(
+                "result" to player2Result,
+                "date" to currentDate,
+                "moves" to moveHistory.size,
+                "opponent" to player1Name
+            )
+            db.collection("users").document(player2Id)
+                .collection("match_history")
+                .add(player2MatchData)
+                .await()
+        } catch (e: Exception) {
+            matchmakingError.value = "Lỗi lưu lịch sử trận đấu: ${e.message}"
+        }
+    }
+
+    private fun endMatch(status: MatchStatus, winner: String?, drawReason: String? = null) {
         matchId.value?.let { id ->
+            val updateData = mutableMapOf<String, Any?>(
+                "status" to status.toString(),
+                "winner" to winner
+            )
+            if (status == MatchStatus.Draw) {
+                updateData["drawReason"] = drawReason ?: chessGame.getGameResult() ?: "Hết cờ! Ván đấu hòa."
+            }
+
             db.collection("matches")
                 .document(id)
-                .update(
-                    mapOf(
-                        "status" to status,
-                        "winner" to winner
-                    )
-                )
+                .update(updateData)
 
             viewModelScope.launch {
-                try {
-                    val player1Id = matchData.value?.get("player1") as? String
-                    val player2Id = matchData.value?.get("player2") as? String
-                    if (player1Id != null && player2Id != null) {
-                        db.runTransaction { transaction ->
-                            val player1Ref = db.collection("users").document(player1Id)
-                            val player2Ref = db.collection("users").document(player2Id)
-
-                            val player1Doc = transaction.get(player1Ref)
-                            val player2Doc = transaction.get(player2Ref)
-
-                            val player1Score = (player1Doc.getLong("score") ?: 0).toInt()
-                            val player2Score = (player2Doc.getLong("score") ?: 0).toInt()
-
-                            when (status) {
-                                "draw" -> {}
-                                "surrendered", "checkmate" -> {
-                                    if (winner == player1Id) {
-                                        transaction.update(player1Ref, mapOf("score" to player1Score + 10))
-                                        transaction.update(player2Ref, mapOf("score" to (player2Score - 5).coerceAtLeast(0)))
-                                    } else if (winner == player2Id) {
-                                        transaction.update(player2Ref, mapOf("score" to player2Score + 10))
-                                        transaction.update(player1Ref, mapOf("score" to (player1Score - 5).coerceAtLeast(0)))
-                                    } else {
-                                        // Trường hợp winner không hợp lệ (null hoặc không khớp với player1Id/player2Id)
-                                        // Không làm gì, giữ nguyên điểm số
-                                    }
-                                }
-                                else -> {}
-                            }
-                        }.await()
+                val player1Id = matchData.value?.get("player1") as? String
+                val player2Id = matchData.value?.get("player2") as? String
+                if (player1Id != null && player2Id != null) {
+                    when (status) {
+                        MatchStatus.Draw -> {
+                            saveMatchHistory(player1Id, player2Id, status, winner)
+                        }
+                        MatchStatus.Surrendered, MatchStatus.Checkmate -> {
+                            updateScores(player1Id, player2Id, winner)
+                            saveMatchHistory(player1Id, player2Id, status, winner)
+                        }
+                        MatchStatus.Ongoing -> {}
                     }
-                } catch (e: Exception) {
-                    matchmakingError.value = "Lỗi cập nhật điểm: ${e.message}"
                 }
             }
         }
@@ -595,230 +909,10 @@ class OnlineChessViewModel : ViewModel() {
         return newBoard
     }
 
-    private fun getPossibleMoves(piece: ChessPiece, position: Position): List<Move> {
-        val moves = mutableListOf<Move>()
-        when (piece.type) {
-            PieceType.PAWN -> {
-                val direction = if (piece.color == PieceColor.WHITE) 1 else -1
-                val startRow = if (piece.color == PieceColor.WHITE) 1 else 6
-                val newRow = position.row + direction
-                if (newRow in 0..7 && board.value[newRow][position.col] == null) {
-                    moves.add(Move(from = position, position = Position(newRow, position.col), captures = false))
-                    if (position.row == startRow && board.value[newRow + direction][position.col] == null) {
-                        moves.add(Move(from = position, position = Position(newRow + direction, position.col), captures = false))
-                    }
-                }
-                val captureCols = listOf(position.col - 1, position.col + 1)
-                for (col in captureCols) {
-                    if (col in 0..7 && newRow in 0..7) {
-                        val targetPiece = board.value[newRow][col]
-                        if (targetPiece != null && targetPiece.color != piece.color) {
-                            moves.add(Move(from = position, position = Position(newRow, col), captures = true))
-                        }
-                    }
-                }
-            }
-            else -> {}
-        }
-        return moves
-    }
-
     private fun positionToString(position: Position): String {
         val col = ('a' + position.col).toString()
         val row = (8 - position.row).toString()
         return "$col$row"
-    }
-
-    private fun saveBoardState() {
-        val state = getBoardStateHash()
-        positionHistory[state] = positionHistory.getOrDefault(state, 0) + 1
-    }
-
-    private fun getBoardStateHash(): String {
-        val sb = StringBuilder()
-        for (row in 0 until 8) {
-            for (col in 0 until 8) {
-                val piece = board.value[row][col]
-                sb.append(
-                    if (piece == null) "0"
-                    else "${piece.color}_${piece.type}_${piece.position.row}_${piece.position.col}"
-                )
-            }
-        }
-        sb.append("|").append(currentTurn.value)
-        sb.append("|")
-        lastMove?.let {
-            sb.append("${it.first.row},${it.first.col}-${it.second.row},${it.second.col}")
-        } ?: sb.append("none")
-        return sb.toString()
-    }
-
-    private fun updateKingPositions() {
-        for (row in 0 until 8) {
-            for (col in 0 until 8) {
-                val piece = board.value[row][col]
-                if (piece?.type == PieceType.KING) {
-                    if (piece.color == PieceColor.WHITE) {
-                        whiteKingPosition = piece.position
-                    } else {
-                        blackKingPosition = piece.position
-                    }
-                }
-            }
-        }
-    }
-
-    private fun isKingInCheck(color: PieceColor): Boolean {
-        val kingPos = if (color == PieceColor.WHITE) whiteKingPosition else blackKingPosition
-        val opponentColor = if (color == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
-        for (row in 0 until 8) {
-            for (col in 0 until 8) {
-                val piece = board.value[row][col]
-                if (piece != null && piece.color == opponentColor) {
-                    val moves = getPossibleMoves(piece, piece.position)
-                    if (moves.any { it.position == kingPos }) return true
-                }
-            }
-        }
-        return false
-    }
-
-    private fun isCheckmate(): Boolean {
-        for (row in 0 until 8) {
-            for (col in 0 until 8) {
-                val piece = board.value[row][col]
-                if (piece != null && piece.color == currentTurn.value) {
-                    val moves = getPossibleMoves(piece, piece.position)
-                    for (move in moves) {
-                        val from = piece.position
-                        val to = move.position
-                        val originalPiece = board.value[from.row][from.col]
-                        val targetPiece = board.value[to.row][to.col]
-
-                        board.value[to.row][to.col] = piece.copy(position = to)
-                        board.value[from.row][from.col] = null
-
-                        val inCheck = isKingInCheck(piece.color)
-
-                        board.value[from.row][from.col] = originalPiece
-                        board.value[to.row][to.col] = targetPiece
-
-                        if (!inCheck) return false
-                    }
-                }
-            }
-        }
-        return true
-    }
-
-    private fun isStalemate(): Boolean {
-        for (row in 0 until 8) {
-            for (col in 0 until 8) {
-                val piece = board.value[row][col]
-                if (piece != null && piece.color == currentTurn.value) {
-                    val moves = getPossibleMoves(piece, piece.position)
-                    for (move in moves) {
-                        val from = piece.position
-                        val to = move.position
-                        val originalPiece = board.value[from.row][from.col]
-                        val targetPiece = board.value[to.row][to.col]
-
-                        board.value[to.row][to.col] = piece.copy(position = to)
-                        board.value[from.row][from.col] = null
-
-                        val inCheck = isKingInCheck(piece.color)
-
-                        board.value[from.row][from.col] = originalPiece
-                        board.value[to.row][to.col] = targetPiece
-
-                        if (!inCheck) return false
-                    }
-                }
-            }
-        }
-        return true
-    }
-
-    private fun isLightSquare(row: Int, col: Int): Boolean {
-        return (row + col) % 2 == 1
-    }
-
-    private fun checkGameState() {
-        if (isGameOver.value) return
-
-        // Kiểm tra không đủ lực chiếu hết
-        val pieces = mutableListOf<ChessPiece>()
-        for (row in 0 until 8) {
-            for (col in 0 until 8) {
-                val piece = board.value[row][col]
-                if (piece != null) pieces.add(piece)
-            }
-        }
-
-        val pieceCount = pieces.size
-        if (pieceCount == 2) {
-            if (pieces.all { it.type == PieceType.KING }) {
-                endMatch(status = "draw", winner = null)
-                gameResult.value = "Hết cờ! Ván đấu hòa (không đủ lực chiếu hết: Vua vs Vua)."
-                return
-            }
-        } else if (pieceCount == 3) {
-            val kings = pieces.filter { it.type == PieceType.KING }
-            val otherPiece = pieces.firstOrNull { it.type != PieceType.KING }
-            if (kings.size == 2 && otherPiece != null) {
-                if (otherPiece.type == PieceType.BISHOP || otherPiece.type == PieceType.KNIGHT) {
-                    endMatch(status = "draw", winner = null)
-                    gameResult.value = "Hết cờ! Ván đấu hòa (không đủ lực chiếu hết: Vua và ${if (otherPiece.type == PieceType.BISHOP) "Tượng" else "Mã"} vs Vua)."
-                    return
-                }
-            }
-        } else if (pieceCount == 4) {
-            val kings = pieces.filter { it.type == PieceType.KING }
-            val bishops = pieces.filter { it.type == PieceType.BISHOP }
-            if (kings.size == 2 && bishops.size == 2) {
-                val bishop1 = bishops[0]
-                val bishop2 = bishops[1]
-                val bishop1IsLight = isLightSquare(bishop1.position.row, bishop1.position.col)
-                val bishop2IsLight = isLightSquare(bishop2.position.row, bishop2.position.col)
-                if (bishop1IsLight == bishop2IsLight) {
-                    endMatch(status = "draw", winner = null)
-                    gameResult.value = "Hết cờ! Ván đấu hòa (không đủ lực chiếu hết: Vua và Tượng vs Vua và Tượng cùng màu ô)."
-                    return
-                }
-            }
-        }
-
-        // Kiểm tra lặp lại vị trí 3 lần
-        val currentState = getBoardStateHash()
-        if (positionHistory[currentState] ?: 0 >= 3) {
-            endMatch(status = "draw", winner = null)
-            gameResult.value = "Hết cờ! Ván đấu hòa (lặp lại vị trí 3 lần)."
-            return
-        }
-
-        // Kiểm tra luật 50 nước
-        if (fiftyMoveCounter >= 50) {
-            endMatch(status = "draw", winner = null)
-            gameResult.value = "Hết cờ! Ván đấu hòa (luật 50 nước: không có pawn move hoặc capture trong 50 nước đi)."
-            return
-        }
-
-        // Kiểm tra chiếu hết và thế cờ chết
-        if (isKingInCheck(currentTurn.value)) {
-            if (isCheckmate()) {
-                val winner = if (currentTurn.value == PieceColor.WHITE) {
-                    matchData.value?.get("player2") as? String
-                } else {
-                    matchData.value?.get("player1") as? String
-                }
-                endMatch(status = "checkmate", winner = winner)
-                return
-            }
-        } else if (isStalemate()) {
-            endMatch(status = "draw", winner = null)
-            gameResult.value = "Hết cờ! Ván đấu hòa (thế cờ chết)."
-            return
-        }
     }
 
     fun cancelMatchmaking() {
@@ -835,10 +929,8 @@ class OnlineChessViewModel : ViewModel() {
         super.onCleared()
         timerJob?.cancel()
         matchListener?.remove()
+        chatListener?.remove()
         matchmakingListener?.remove()
-        matchId.value?.let { id ->
-            db.collection("matches").document(id).delete()
-        }
         cancelMatchmaking()
     }
 }

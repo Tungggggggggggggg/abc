@@ -2,10 +2,15 @@ package com.example.chessmate.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,16 +20,21 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.chessmate.R
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.chessmate.ui.theme.ChessmateTheme
+import com.example.chessmate.model.ChatMessage
+import com.example.chessmate.viewmodel.ChatViewModel
+import com.example.chessmate.viewmodel.ChatViewModelFactory
+import android.util.Log
+import kotlinx.coroutines.delay
 
-// Thanh tiêu đề (App Bar)
 @Composable
 fun ChatDetailHeader(
+    friendId: String,
+    friendName: String,
     onBackClick: () -> Unit,
+    navController: NavController?,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -45,22 +55,68 @@ fun ChatDetailHeader(
                 modifier = Modifier.size(24.dp)
             )
         }
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "Người dùng",
+            text = friendName,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
+            color = Color.Black,
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .wrapContentWidth(Alignment.CenterHorizontally)
+                .wrapContentWidth(Alignment.Start)
+        )
+        Image(
+            painter = painterResource(id = R.drawable.profile),
+            contentDescription = "Avatar",
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .clickable {
+                    navController?.navigate("competitor_profile/$friendId")
+                }
         )
         Spacer(modifier = Modifier.width(20.dp))
     }
 }
 
-// Nội dung chính của màn hình Chat Detail
+@Composable
+fun MessageItem(
+    message: ChatMessage,
+    isCurrentUser: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp, horizontal = 16.dp),
+        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    if (isCurrentUser) Color(0xFFBBDEFB) else Color.White,
+                    RoundedCornerShape(
+                        topStart = 12.dp,
+                        topEnd = 12.dp,
+                        bottomStart = if (isCurrentUser) 12.dp else 0.dp,
+                        bottomEnd = if (isCurrentUser) 0.dp else 12.dp
+                    )
+                )
+                .padding(12.dp)
+                .widthIn(max = 280.dp)
+        ) {
+            Text(
+                text = message.message,
+                color = Color.Black,
+                fontSize = 16.sp
+            )
+        }
+    }
+}
+
 @Composable
 fun ChatDetailContent(
+    messages: List<ChatMessage>,
+    currentUserId: String?,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -68,45 +124,38 @@ fun ChatDetailContent(
             .fillMaxSize()
             .background(colorResource(id = R.color.color_c97c5d))
     ) {
-        // Phần "Tin nhắn chưa đọc" với đường gạch ngang
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            HorizontalDivider(
-                color = Color.White,
-                thickness = 1.dp,
-                modifier = Modifier.weight(1f)
-            )
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .background(Color.White, shape = RoundedCornerShape(16.dp))
-            ) {
-                Text(
-                    text = "Tin nhắn chưa đọc",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(8.dp)
-                )
+        val listState = rememberLazyListState()
+        LaunchedEffect(messages) {
+            if (messages.isNotEmpty()) {
+                delay(100)
+                listState.animateScrollToItem(0)
             }
-            HorizontalDivider(
-                color = Color.White,
-                thickness = 1.dp,
-                modifier = Modifier.weight(1f)
-            )
         }
 
-        // Nội dung trò chuyện sẽ được thêm ở đây
-        // Ví dụ: danh sách tin nhắn, hình ảnh, v.v.
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            state = listState,
+            reverseLayout = true,
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(messages.reversed()) { message ->
+                MessageItem(
+                    message = message,
+                    isCurrentUser = message.senderId == currentUserId
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
     }
 }
 
-// Vùng nhập tin nhắn
 @Composable
 fun ChatInput(
+    messageText: String,
+    onMessageChange: (String) -> Unit,
+    onSendMessage: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -118,25 +167,13 @@ fun ChatInput(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.image),
-                contentDescription = "Hình ảnh",
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Image(
-                painter = painterResource(id = R.drawable.mic),
-                contentDescription = "Micro",
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
             OutlinedTextField(
-                value = "", // Giá trị nhập tin nhắn
-                onValueChange = { /* Xử lý thay đổi giá trị nhập */ },
+                value = messageText,
+                onValueChange = onMessageChange,
                 placeholder = { Text("Nhập tin nhắn...") },
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = { /* Xử lý gửi tin nhắn */ }) {
+            IconButton(onClick = onSendMessage) {
                 Image(
                     painter = painterResource(id = R.drawable.send),
                     contentDescription = "Gửi",
@@ -147,27 +184,49 @@ fun ChatInput(
     }
 }
 
-// Màn hình chính để hiển thị Chat Detail
 @Composable
 fun ChatDetailScreen(
     navController: NavController? = null,
+    friendId: String,
+    friendName: String,
+    viewModel: ChatViewModel = viewModel(factory = ChatViewModelFactory()),
     onBackClick: () -> Unit = { navController?.popBackStack() }
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        ChatDetailHeader(onBackClick = onBackClick)
-        ChatDetailContent(
-            modifier = Modifier
-                .weight(1f)
-        )
-        ChatInput()
-    }
-}
+    val messages by viewModel.messages.collectAsState()
+    val hasUnreadMessages by viewModel.hasUnreadMessages.collectAsState()
+    var messageText by remember { mutableStateOf("") }
 
-// Xem trước giao diện màn hình Chat Detail
-@Preview(showBackground = true)
-@Composable
-fun ChatDetailScreenPreview() {
-    ChessmateTheme {
-        ChatDetailScreen()
+    LaunchedEffect(friendId) {
+        val currentUserId = viewModel.currentUserId ?: ""
+        val conversationId = viewModel.getConversationId(currentUserId, friendId)
+        Log.d("ChatDetailScreen", "Friend ID: $friendId, Conversation ID: $conversationId")
+        viewModel.listenToChatMessages(friendId)
+        if (hasUnreadMessages) {
+            viewModel.markMessagesAsRead(friendId)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        ChatDetailHeader(
+            friendId = friendId,
+            friendName = friendName,
+            onBackClick = onBackClick,
+            navController = navController
+        )
+        ChatDetailContent(
+            messages = messages,
+            currentUserId = viewModel.currentUserId,
+            modifier = Modifier.weight(1f)
+        )
+        ChatInput(
+            messageText = messageText,
+            onMessageChange = { messageText = it },
+            onSendMessage = {
+                if (messageText.isNotBlank()) {
+                    viewModel.sendMessage(friendId, messageText)
+                    messageText = ""
+                }
+            }
+        )
     }
 }

@@ -1,11 +1,5 @@
 package com.example.chessmate.model
 
-data class Move(
-    val from: Position,
-    val position: Position,
-    val captures: Boolean
-)
-
 class ChessGame {
     private var board: Array<Array<ChessPiece?>> = Array(8) { Array(8) { null } }
     private var currentTurn: PieceColor = PieceColor.WHITE
@@ -30,6 +24,7 @@ class ChessGame {
 
     init {
         initializeBoard()
+        saveBoardState()
     }
 
     fun getLastMove(): Pair<Position, Position>? = lastMove
@@ -504,6 +499,11 @@ class ChessGame {
         }
     }
 
+    // Hàm công khai để gọi checkGameState từ bên ngoài
+    fun updateGameState() {
+        checkGameState()
+    }
+
     private fun isCheckmate(): Boolean {
         for (row in 0 until 8) {
             for (col in 0 until 8) {
@@ -530,9 +530,60 @@ class ChessGame {
         return true
     }
 
+    // Getter và Setter cho đồng bộ với OnlineChessViewModel
     fun getBoard(): Array<Array<ChessPiece?>> = board
     fun getCurrentTurn(): PieceColor = currentTurn
     fun isGameOver(): Boolean = isGameOver
     fun getGameResult(): String? = gameResult
     fun getPendingPromotion(): Position? = pendingPromotion
+    fun getFiftyMoveCounter(): Int = fiftyMoveCounter
+    fun setFiftyMoveCounter(value: Int) {
+        fiftyMoveCounter = value
+    }
+    fun getPositionHistory(): List<String> = positionHistory.keys.toList()
+    fun setPositionHistory(history: List<String>) {
+        positionHistory.clear()
+        history.forEach { pos ->
+            positionHistory[pos] = positionHistory[pos]?.plus(1) ?: 1
+        }
+    }
+    fun setCurrentTurn(turn: PieceColor) {
+        currentTurn = turn
+    }
+    fun getWhiteKingPosition(): Position = whiteKingPosition
+    fun getBlackKingPosition(): Position = blackKingPosition
+    fun getHasMoved(): Map<String, Boolean> = hasMoved
+    fun setWhiteKingPosition(position: Position) {
+        whiteKingPosition = position
+    }
+    fun setBlackKingPosition(position: Position) {
+        blackKingPosition = position
+    }
+    fun setHasMoved(key: String, value: Boolean) {
+        hasMoved[key] = value
+    }
+    fun setLastMove(from: Position?, to: Position?) {
+        lastMove = if (from != null && to != null) Pair(from, to) else null
+    }
+
+    // Thêm các phương thức public để truy cập logic private
+    fun isKingInCheckPublic(color: PieceColor): Boolean {
+        return isKingInCheck(color)
+    }
+
+    fun isCheckmatePublic(): Boolean {
+        return isCheckmate()
+    }
+
+    fun isStalematePublic(): Boolean {
+        return isStalemate()
+    }
+
+    fun isDrawByFiftyMoveRulePublic(): Boolean {
+        return fiftyMoveCounter >= 50
+    }
+
+    fun isDrawByRepetitionPublic(): Boolean {
+        return positionHistory.values.any { it >= 3 }
+    }
 }
