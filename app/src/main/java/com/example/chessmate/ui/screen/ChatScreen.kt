@@ -33,6 +33,7 @@ fun ChatScreen(
 ) {
     val friendsWithMessages by viewModel.friendsWithMessages.collectAsState()
 
+    // Cập nhật trạng thái tin nhắn mỗi khi màn hình được hiển thị
     LaunchedEffect(Unit) {
         viewModel.loadFriendsWithMessages()
     }
@@ -174,7 +175,7 @@ fun FriendListItem(
                 },
                 fontSize = 14.sp,
                 fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Normal,
-                color = Color.Black, // Đổi màu thành đen
+                color = Color.Black,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )

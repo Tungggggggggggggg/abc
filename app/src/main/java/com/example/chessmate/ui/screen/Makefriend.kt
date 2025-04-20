@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,12 +40,17 @@ import com.example.chessmate.viewmodel.FindFriendsViewModel
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.graphics.graphicsLayer
+import com.example.chessmate.viewmodel.ChatViewModel
+import com.example.chessmate.viewmodel.ChatViewModelFactory
 
 @Composable
 fun Header(
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = ChatViewModelFactory())
 ) {
+    val hasUnreadMessages = viewModel.hasUnreadMessages.collectAsState()
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -62,6 +68,16 @@ fun Header(
                 contentDescription = "Tin nhắn",
                 modifier = Modifier.size(32.dp)
             )
+            if (hasUnreadMessages.value) { // Sử dụng .value để truy cập giá trị từ State<Boolean>
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .align(Alignment.TopEnd)
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(Color.Red)
+                )
+            }
         }
         Text(
             text = "Tìm Bạn",
@@ -172,7 +188,8 @@ fun SearchBar(
 @Composable
 fun FindFriendsScreen(
     navController: NavController,
-    viewModel: FindFriendsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    viewModel: FindFriendsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    chatViewModel: ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = ChatViewModelFactory())
 ) {
     val searchResults by viewModel.searchResults.collectAsState()
     val receivedRequests by viewModel.receivedRequests.collectAsState()
@@ -189,6 +206,7 @@ fun FindFriendsScreen(
         viewModel.loadReceivedRequests()
         viewModel.loadSentRequests()
         viewModel.loadFriends()
+        chatViewModel.loadFriendsWithMessages()
     }
 
     // Sắp xếp searchResults: bạn bè -> đã gửi lời mời -> còn lại
@@ -208,7 +226,10 @@ fun FindFriendsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Header(navController = navController)
+        Header(
+            navController = navController,
+            viewModel = chatViewModel
+        )
 
         Column(
             modifier = Modifier

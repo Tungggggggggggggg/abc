@@ -22,16 +22,21 @@ import com.example.chessmate.model.PieceColor
 import com.example.chessmate.ui.components.ButtonItem
 import com.example.chessmate.ui.components.Chessboard
 import com.example.chessmate.ui.components.Logo
+import com.example.chessmate.viewmodel.ChatViewModel
 import com.example.chessmate.viewmodel.ChessViewModel
 import com.example.chessmate.viewmodel.FindFriendsViewModel
+import com.example.chessmate.viewmodel.ChatViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun MainHeader(
     navController: NavController,
     modifier: Modifier = Modifier,
-    onMessageClick: () -> Unit = {}
+    onMessageClick: () -> Unit = {},
+    viewModel: ChatViewModel = viewModel(factory = ChatViewModelFactory())
 ) {
+    val hasUnreadMessages = viewModel.hasUnreadMessages.collectAsState()
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -50,14 +55,16 @@ fun MainHeader(
                     contentDescription = "Tin nhắn",
                     modifier = Modifier.size(32.dp)
                 )
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .align(Alignment.TopEnd)
-                        .clip(CircleShape)
-                        .background(Color.Red)
-                )
+                if (hasUnreadMessages.value) { // Sử dụng .value để truy cập giá trị từ State<Boolean>
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .offset(x = 4.dp, y = (-4).dp)
+                            .align(Alignment.TopEnd)
+                            .clip(CircleShape)
+                            .background(Color.Red)
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -138,7 +145,8 @@ fun MainButtonRow(
 fun MainScreen(
     navController: NavController,
     viewModel: ChessViewModel = viewModel(),
-    friendViewModel: FindFriendsViewModel = viewModel()
+    friendViewModel: FindFriendsViewModel = viewModel(),
+    chatViewModel: ChatViewModel = viewModel(factory = ChatViewModelFactory())
 ) {
     val auth = FirebaseAuth.getInstance()
     val receivedRequests = friendViewModel.receivedRequests.collectAsState()
@@ -151,6 +159,7 @@ fun MainScreen(
             }
         }
         friendViewModel.loadReceivedRequests()
+        chatViewModel.loadFriendsWithMessages()
     }
 
     Scaffold(
@@ -168,7 +177,8 @@ fun MainScreen(
         ) {
             MainHeader(
                 navController = navController,
-                onMessageClick = { navController.navigate("chat") }
+                onMessageClick = { navController.navigate("chat") },
+                viewModel = chatViewModel
             )
             Logo()
             Spacer(modifier = Modifier.height(20.dp))
