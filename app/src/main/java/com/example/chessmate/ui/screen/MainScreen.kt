@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.chessmate.R
 import com.example.chessmate.model.PieceColor
@@ -25,7 +24,6 @@ import com.example.chessmate.ui.components.Logo
 import com.example.chessmate.viewmodel.ChatViewModel
 import com.example.chessmate.viewmodel.ChessViewModel
 import com.example.chessmate.viewmodel.FindFriendsViewModel
-import com.example.chessmate.viewmodel.ChatViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
@@ -33,7 +31,7 @@ fun MainHeader(
     navController: NavController,
     modifier: Modifier = Modifier,
     onMessageClick: () -> Unit = {},
-    viewModel: ChatViewModel = viewModel(factory = ChatViewModelFactory())
+    viewModel: ChatViewModel
 ) {
     val hasUnreadMessages = viewModel.hasUnreadMessages.collectAsState()
 
@@ -55,7 +53,7 @@ fun MainHeader(
                     contentDescription = "Tin nhắn",
                     modifier = Modifier.size(32.dp)
                 )
-                if (hasUnreadMessages.value) { // Sử dụng .value để truy cập giá trị từ State<Boolean>
+                if (hasUnreadMessages.value) {
                     Box(
                         modifier = Modifier
                             .size(12.dp)
@@ -144,9 +142,9 @@ fun MainButtonRow(
 @Composable
 fun MainScreen(
     navController: NavController,
-    viewModel: ChessViewModel = viewModel(),
-    friendViewModel: FindFriendsViewModel = viewModel(),
-    chatViewModel: ChatViewModel = viewModel(factory = ChatViewModelFactory())
+    viewModel: ChessViewModel,
+    friendViewModel: FindFriendsViewModel,
+    chatViewModel: ChatViewModel
 ) {
     val auth = FirebaseAuth.getInstance()
     val receivedRequests = friendViewModel.receivedRequests.collectAsState()

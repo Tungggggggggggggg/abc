@@ -16,11 +16,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.chessmate.R
 import com.example.chessmate.viewmodel.ChatViewModel
-import com.example.chessmate.viewmodel.ChatViewModelFactory
 import com.example.chessmate.viewmodel.FriendWithLastMessage
 import java.net.URLEncoder
 import android.util.Log
@@ -28,12 +26,11 @@ import android.util.Log
 @Composable
 fun ChatScreen(
     navController: NavController? = null,
-    viewModel: ChatViewModel = viewModel(factory = ChatViewModelFactory()),
+    viewModel: ChatViewModel,
     onBackClick: () -> Unit = { navController?.popBackStack() }
 ) {
     val friendsWithMessages by viewModel.friendsWithMessages.collectAsState()
 
-    // Cập nhật trạng thái tin nhắn mỗi khi màn hình được hiển thị
     LaunchedEffect(Unit) {
         viewModel.loadFriendsWithMessages()
     }
@@ -134,7 +131,7 @@ fun FriendListItem(
     val friend = friendWithMessage.friend
     val lastMessage = friendWithMessage.lastMessage
     val hasUnread = friendWithMessage.hasUnread
-    val currentUserId = viewModel<ChatViewModel>().currentUserId
+    val currentUserId = friendWithMessage.friend.userId // Sửa lỗi: không tạo instance mới
 
     Row(
         modifier = Modifier

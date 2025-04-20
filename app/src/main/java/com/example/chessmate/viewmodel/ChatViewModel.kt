@@ -31,7 +31,7 @@ class ChatViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
     private var messageSequence = 0L
     private var chatListener: ListenerRegistration? = null
-    private var friendsListener: ListenerRegistration? = null // Listener cho danh sách bạn bè
+    private var friendsListener: ListenerRegistration? = null
     private var currentConversationId: String? = null
 
     val currentUserId: String? get() = auth.currentUser?.uid
@@ -177,7 +177,6 @@ class ChatViewModel : ViewModel() {
             .add(chatData)
             .addOnSuccessListener {
                 Log.d("ChatViewModel", "Message sent: $message")
-                // Không cần gọi lại loadFriendsWithMessages() vì listener đã tự động cập nhật
             }
             .addOnFailureListener { e ->
                 Log.e("ChatViewModel", "Error sending message: ${e.message}")
@@ -204,7 +203,6 @@ class ChatViewModel : ViewModel() {
                 batch.commit()
                     .addOnSuccessListener {
                         Log.d("ChatViewModel", "Marked messages as read for conversation: $conversationId")
-                        // Không cần gọi lại loadFriendsWithMessages() vì listener đã tự động cập nhật
                     }
                     .addOnFailureListener { e ->
                         Log.e("ChatViewModel", "Error marking messages as read: ${e.message}")
@@ -222,7 +220,7 @@ class ChatViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         chatListener?.remove()
-        friendsListener?.remove() // Hủy listener khi ViewModel bị hủy
+        friendsListener?.remove()
         currentConversationId = null
     }
 }

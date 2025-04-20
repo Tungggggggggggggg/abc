@@ -13,9 +13,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -27,11 +27,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.chessmate.R
 import com.example.chessmate.ui.components.Logo
 import com.example.chessmate.model.FriendRequest
@@ -41,13 +39,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.graphics.graphicsLayer
 import com.example.chessmate.viewmodel.ChatViewModel
-import com.example.chessmate.viewmodel.ChatViewModelFactory
 
 @Composable
 fun Header(
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = ChatViewModelFactory())
+    viewModel: ChatViewModel
 ) {
     val hasUnreadMessages = viewModel.hasUnreadMessages.collectAsState()
 
@@ -68,7 +65,7 @@ fun Header(
                 contentDescription = "Tin nhắn",
                 modifier = Modifier.size(32.dp)
             )
-            if (hasUnreadMessages.value) { // Sử dụng .value để truy cập giá trị từ State<Boolean>
+            if (hasUnreadMessages.value) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
@@ -188,8 +185,8 @@ fun SearchBar(
 @Composable
 fun FindFriendsScreen(
     navController: NavController,
-    viewModel: FindFriendsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    chatViewModel: ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = ChatViewModelFactory())
+    viewModel: FindFriendsViewModel,
+    chatViewModel: ChatViewModel
 ) {
     val searchResults by viewModel.searchResults.collectAsState()
     val receivedRequests by viewModel.receivedRequests.collectAsState()
@@ -209,7 +206,6 @@ fun FindFriendsScreen(
         chatViewModel.loadFriendsWithMessages()
     }
 
-    // Sắp xếp searchResults: bạn bè -> đã gửi lời mời -> còn lại
     val sortedSearchResults = searchResults.sortedWith(compareBy<User> {
         when {
             friends.any { friend -> friend.userId == it.userId } -> 0
@@ -218,7 +214,6 @@ fun FindFriendsScreen(
         }
     })
 
-    // Đồng bộ hóa isSearchEmpty với kết quả tìm kiếm
     LaunchedEffect(searchResults, currentSearchQuery) {
         if (searchQuery == currentSearchQuery) {
             isSearchEmpty = searchQuery.isNotBlank() && searchResults.isEmpty()
@@ -427,7 +422,6 @@ fun SearchResultItem(
                 Text(text = "Bạn bè")
             }
         } else {
-            // Hiển thị nút "Xóa lời mời"
             Button(
                 onClick = onCancelFriendRequest,
                 colors = ButtonDefaults.buttonColors(
@@ -488,11 +482,4 @@ fun FriendRequestItem(
             )
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FindFriendsScreenPreview() {
-    val navController = rememberNavController()
-    FindFriendsScreen(navController)
 }
