@@ -31,6 +31,7 @@ class ChatViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
     private var messageSequence = 0L
     private var chatListener: ListenerRegistration? = null
+    private var friendsListener: ListenerRegistration? = null // Listener cho danh sách bạn bè
     private var currentConversationId: String? = null
 
     val currentUserId: String? get() = auth.currentUser?.uid
@@ -41,14 +42,27 @@ class ChatViewModel : ViewModel() {
 
     fun loadFriendsWithMessages() {
         val currentUserId = auth.currentUser?.uid ?: return
-        firestore.collection("friends")
+
+        // Hủy listener cũ nếu tồn tại
+        friendsListener?.remove()
+
+        // Lắng nghe thay đổi trong danh sách bạn bè
+        friendsListener = firestore.collection("friends")
             .whereIn("user1", listOf(currentUserId))
-            .get()
-            .addOnSuccessListener { result1 ->
+            .addSnapshotListener { result1, error1 ->
+                if (error1 != null || result1 == null) {
+                    Log.e("ChatViewModel", "Error loading friends (user1): ${error1?.message}")
+                    return@addSnapshotListener
+                }
+
                 firestore.collection("friends")
                     .whereIn("user2", listOf(currentUserId))
-                    .get()
-                    .addOnSuccessListener { result2 ->
+                    .addSnapshotListener { result2, error2 ->
+                        if (error2 != null || result2 == null) {
+                            Log.e("ChatViewModel", "Error loading friends (user2): ${error2?.message}")
+                            return@addSnapshotListener
+                        }
+
                         val allDocs = result1.documents + result2.documents
                         val friendList = mutableListOf<FriendWithLastMessage>()
                         val processedFriendIds = mutableSetOf<String>()
@@ -67,13 +81,18 @@ class ChatViewModel : ViewModel() {
                                         val friend = User(friendId, name, email, isOnline)
 
                                         val conversationId = getConversationId(currentUserId, friendId)
+                                        // Lắng nghe tin nhắn mới nhất
                                         firestore.collection("conversations")
                                             .document(conversationId)
                                             .collection("chat_messages")
                                             .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                                             .limit(1)
-                                            .get()
-                                            .addOnSuccessListener { snapshot ->
+                                            .addSnapshotListener { snapshot, error ->
+                                                if (error != null || snapshot == null) {
+                                                    Log.e("ChatViewModel", "Error loading last message: ${error?.message}")
+                                                    return@addSnapshotListener
+                                                }
+
                                                 val lastMessage = snapshot.documents.firstOrNull()?.let { doc ->
                                                     val senderId = doc.getString("senderId") ?: return@let null
                                                     val message = doc.getString("message") ?: return@let null
@@ -87,6 +106,8 @@ class ChatViewModel : ViewModel() {
                                                     msg.senderId != currentUserId && !msg.readBy.contains(currentUserId)
                                                 } ?: false
 
+                                                // Cập nhật danh sách bạn bè
+                                                friendList.removeAll { it.friend.userId == friendId }
                                                 friendList.add(FriendWithLastMessage(friend, lastMessage, hasUnread))
                                                 _friendsWithMessages.value = friendList.sortedBy { it.lastMessage?.timestamp ?: 0L }.reversed()
                                                 Log.d("ChatViewModel", "Loaded friend: ID=$friendId, Name=$name, LastMessage=${lastMessage?.message}, Unread=$hasUnread")
@@ -156,7 +177,7 @@ class ChatViewModel : ViewModel() {
             .add(chatData)
             .addOnSuccessListener {
                 Log.d("ChatViewModel", "Message sent: $message")
-                loadFriendsWithMessages()
+                // Không cần gọi lại loadFriendsWithMessages() vì listener đã tự động cập nhật
             }
             .addOnFailureListener { e ->
                 Log.e("ChatViewModel", "Error sending message: ${e.message}")
@@ -183,7 +204,7 @@ class ChatViewModel : ViewModel() {
                 batch.commit()
                     .addOnSuccessListener {
                         Log.d("ChatViewModel", "Marked messages as read for conversation: $conversationId")
-                        loadFriendsWithMessages()
+                        // Không cần gọi lại loadFriendsWithMessages() vì listener đã tự động cập nhật
                     }
                     .addOnFailureListener { e ->
                         Log.e("ChatViewModel", "Error marking messages as read: ${e.message}")
@@ -201,6 +222,7 @@ class ChatViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         chatListener?.remove()
+        friendsListener?.remove() // Hủy listener khi ViewModel bị hủy
         currentConversationId = null
     }
 }
