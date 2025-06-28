@@ -1,7 +1,4 @@
 Solace - Nền tảng Hỗ trợ Sức khỏe Tâm lý 🌟
-English | Tiếng Việt
-
-Tiếng Việt
 Tổng quan 🌈
 Solace là một nền tảng web được thiết kế để cung cấp không gian an toàn và minh bạch cho Gen Z và Millennials chia sẻ cảm xúc, kết nối với cộng đồng hỗ trợ và thúc đẩy sức khỏe tâm lý. Với trọng tâm vào trải nghiệm người dùng, khả năng tiếp cận và bảo mật, Solace khuyến khích bày tỏ cảm xúc công khai trong khi duy trì trách nhiệm thông qua danh tính được xác minh. Nền tảng tận dụng các công nghệ hiện đại và công cụ AI như Gemini để nâng cao hiệu quả phát triển và tương tác người dùng.
 Khẩu hiệu: Chia sẻ trái tim, tìm thấy bình yên 💖
@@ -160,7 +157,7 @@ Dự án được cấp phép theo MIT License. Xem file LICENSE để biết th
 Liên hệ 📧
 Để biết thêm thông tin, liên hệ đội ngũ Solace tại solace.support@example.com.
 
-English
+
 Overview 🌟
 Solace is a web-based platform designed to provide a safe and transparent space for Gen Z and Millennials to share emotions, connect with a supportive community, and promote mental well-being. Built with a focus on user experience, accessibility, and security, Solace encourages open emotional expression while maintaining accountability through verified identities. The platform leverages modern technologies and AI tools like Gemini to enhance development efficiency and user engagement.
 Slogan: Share Your Heart, Find Your Peace 💖
