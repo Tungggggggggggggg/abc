@@ -74,7 +74,7 @@ Solace is a web platform offering a **safe** and **transparent** space for Gen Z
 2. **Cài đặt phụ thuộc**:
    ```bash
    cd backend && npm install
-   cd ../frontend && npm install
+   cd frontend && npm install
    ```
 
 3. **Cấu hình `.env`**:
