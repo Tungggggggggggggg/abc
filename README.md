@@ -80,18 +80,13 @@ Solace is a web platform offering a **safe** and **transparent** space for Gen Z
 3. **Cấu hình `.env`**:
    - Sao chép file `.env.example` và cấu hình theo nhu cầu.
 
-4. **Chạy migration**:
-   ```bash
-   cd backend && npm run migrate
-   ```
-
-5. **Khởi chạy ứng dụng**:
+4. **Khởi chạy ứng dụng**:
    ```bash
    npm start  # Backend
    npm run dev  # Frontend
    ```
 
-6. **Truy cập**: [http://localhost:3000](http://localhost:3000)
+5. **Truy cập**: [http://localhost:3000](http://localhost:3000)
 
 ### Requirements
 
@@ -111,24 +106,20 @@ Solace is a web platform offering a **safe** and **transparent** space for Gen Z
 2. **Install dependencies**:
    ```bash
    cd backend && npm install
-   cd ../frontend && npm install
+   cd frontend && npm install
    ```
 
 3. **Configure `.env`**:
    - Copy `.env.example` and configure as needed.
 
-4. **Run migration**:
-   ```bash
-   cd backend && npm run migrate
-   ```
 
-5. **Start application**:
+4. **Start application**:
    ```bash
    npm start  # Backend
    npm run dev  # Frontend
    ```
 
-6. **Access**: [http://localhost:3000](http://localhost:3000)
+5. **Access**: [http://localhost:3000](http://localhost:3000)
 
 ---
 
